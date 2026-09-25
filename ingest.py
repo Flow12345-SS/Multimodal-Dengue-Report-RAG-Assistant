@@ -50,16 +50,18 @@ def extract_metadata(text):
     patient_id = "Unknown"
     patient_name = "Unknown"
     
-    id_match = re.search(r"(?:Patient\s*ID|PID|\bID)\s*[:\-]\s*([A-Z0-9\-]+)", text, re.IGNORECASE)
+    id_match = re.search(r"(?:Patient\s*ID|PID|\bID|Patient\s*Report)\s*[:\-]?\s*([A-Z0-9\-]+)", text, re.IGNORECASE)
+    if not id_match:
+        id_match = re.search(r'\b(D\d{3,4}|PID-\d+)\b', text, re.IGNORECASE)
     if id_match:
         val = id_match.group(1).strip()
-        if val.lower() not in ['unknown', 'unspecified', 'intake']:
-            patient_id = val
+        if val.lower() not in ['unknown', 'unspecified', 'intake', 'patient']:
+            patient_id = val.upper()
         
     name_match = re.search(r"(?:Patient\s*Name|Name)\s*[:\-]\s*([A-Za-z\s]+)", text, re.IGNORECASE)
     if name_match:
         val = name_match.group(1).split('\n')[0].strip()
-        if val.lower() not in ['unknown', 'unspecified']:
+        if val.lower() not in ['unknown', 'unspecified', 'male', 'female', 'years']:
             patient_name = val
         
     return {"patient_id": patient_id, "patient_name": patient_name}
@@ -103,13 +105,20 @@ def ingest_documents():
                 if not page_text:
                     continue
                 
-                # Check for multiple patient sections within page
-                patient_sections = re.split(
-                    r'(?=(?:Patient\s*Details|Patient\s*Name\s*[:\-]|Medical\s*Report|Patient\s*Report|DENGUE\s*PATIENT\s*REPORT)\b)',
-                    page_text,
-                    flags=re.IGNORECASE
-                )
-                if not patient_sections:
+                # Extract page-level metadata first
+                page_meta = extract_metadata(page_text)
+                default_pid = page_meta.get('patient_id', 'Unknown')
+                default_pname = page_meta.get('patient_name', 'Unknown')
+
+                # Only split if there are multiple separate reports in a single page
+                report_headers = list(re.finditer(r'(?:DENGUE\s*PATIENT\s*REPORT|Patient\s*Report\s*-\s*D\d+)', page_text, flags=re.IGNORECASE))
+                if len(report_headers) > 1:
+                    patient_sections = []
+                    for idx, h in enumerate(report_headers):
+                        start_pos = h.start()
+                        end_pos = report_headers[idx + 1].start() if idx + 1 < len(report_headers) else len(page_text)
+                        patient_sections.append(page_text[start_pos:end_pos])
+                else:
                     patient_sections = [page_text]
                     
                 for section in patient_sections:
@@ -117,8 +126,12 @@ def ingest_documents():
                         continue
                         
                     meta = extract_metadata(section)
-                    pid = meta.get('patient_id', 'Unknown')
-                    pname = meta.get('patient_name', 'Unknown')
+                    pid = meta.get('patient_id')
+                    if not pid or pid == "Unknown":
+                        pid = default_pid
+                    pname = meta.get('patient_name')
+                    if not pname or pname == "Unknown":
+                        pname = default_pname
                     
                     if pname != "Unknown" and pname != "Unspecified":
                         patient_key = f"{pname.lower()}_{pid.upper()}"

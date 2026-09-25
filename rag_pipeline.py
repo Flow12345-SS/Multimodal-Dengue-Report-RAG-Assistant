@@ -238,6 +238,22 @@ def get_all_indexed_patients() -> list:
                 pass
     return []
 
+def get_active_patient() -> dict:
+    """Reads active patient from active_patient.json."""
+    for p in [
+        os.path.join(VECTOR_DB_DIR, "active_patient.json"),
+        os.path.join(REPORTS_DIR, "active_patient.json")
+    ]:
+        if os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, dict) and data.get("patient_name"):
+                        return data
+            except Exception:
+                pass
+    return {}
+
 
 # ---------------------------------------------------------------------------
 # Target Patient Extractor from User Query
@@ -319,9 +335,11 @@ def extract_patient_data(text: str, metadata: dict = None) -> dict:
     if metadata.get('patient_id') and metadata['patient_id'] not in ['Unknown', 'Unspecified', 'intake']:
         data['patient_id'] = metadata['patient_id']
     else:
-        id_m = re.search(r'(?:Patient\s*ID|PID|\bID)\s*[:\-]\s*([A-Z0-9\-]+)', text, re.I)
-        if id_m and id_m.group(1).strip() not in ['Unknown', 'Unspecified']:
-            data['patient_id'] = id_m.group(1).strip()
+        id_m = re.search(r'(?:Patient\s*ID|PID|\bID|Patient\s*Report)\s*[:\-]?\s*([A-Z0-9\-]+)', text, re.I)
+        if not id_m:
+            id_m = re.search(r'\b(D\d{3,4}|PID-\d+)\b', text, re.I)
+        if id_m and id_m.group(1).strip() not in ['Unknown', 'Unspecified', 'Patient']:
+            data['patient_id'] = id_m.group(1).strip().upper()
         else:
             data['patient_id'] = 'Unknown'
 
@@ -489,6 +507,17 @@ def generate_answer(question: str, model_name: str = "tinyllama"):
     target_info = extract_target_patient_from_query(question, known_patients)
     target_name = target_info.get("name")
     target_id = target_info.get("id")
+
+    # If no target patient was explicitly mentioned in the query:
+    if not target_name and not target_id:
+        if len(known_patients) == 1:
+            target_name = known_patients[0].get("name")
+            target_id = known_patients[0].get("id")
+        else:
+            active_info = get_active_patient()
+            if active_info.get("patient_name") and active_info["patient_name"] != "Unknown":
+                target_name = active_info["patient_name"]
+                target_id = active_info.get("patient_id")
 
     # If it is an unlisted general medical question without patient reference:
     if is_general_medical_query(question) and not target_name and not target_id:
