@@ -812,7 +812,10 @@ with chat_container:
 
             # Show Answer Section in modern redesigned cards
             answer_cards_html = render_styled_answer_cards(answer)
-            st.markdown(answer_cards_html, unsafe_allow_html=True)
+            if hasattr(st, "html"):
+                st.html(answer_cards_html)
+            else:
+                st.markdown(answer_cards_html, unsafe_allow_html=True)
 
             # Show Clean Clinical Evidence Card
             if evidence_list:
@@ -830,27 +833,23 @@ with chat_container:
                 findings_html = "".join([f"<li>{item}</li>" for item in ev_findings]) if ev_findings else "<li>No laboratory findings specified</li>"
                 recs_html = "".join([f"<li>{item}</li>" for item in ev_recs]) if ev_recs else "<li>Follow standard clinical care guidance</li>"
 
-                clinical_card_html = f"""
-<div class="clinical-evidence-card">
-    <div class="evidence-header-label">👤 Patient Name</div>
-    <div class="evidence-patient-name">{ev_name}</div>
-
-    <div class="evidence-header-label" style="margin-top: 1.1rem;">🩸 Clinical Findings</div>
-    <ul class="evidence-bullet-list">
-        {findings_html}
-    </ul>
-
-    <div class="evidence-header-label" style="margin-top: 1.1rem;">🩺 Diagnosis</div>
-    <div class="evidence-val-text">{ev_diag}</div>
-
-    <div class="evidence-header-label" style="margin-top: 1.1rem;">💊 Recommendation</div>
-    <ul class="evidence-bullet-list">
-        {recs_html}
-    </ul>
-</div>
-"""
+                clinical_card_html = (
+                    f'<div class="clinical-evidence-card">'
+                    f'<div class="evidence-header-label">👤 Patient Name</div>'
+                    f'<div class="evidence-patient-name">{ev_name}</div>'
+                    f'<div class="evidence-header-label" style="margin-top: 1.1rem;">🩸 Clinical Findings</div>'
+                    f'<ul class="evidence-bullet-list">{findings_html}</ul>'
+                    f'<div class="evidence-header-label" style="margin-top: 1.1rem;">🩺 Diagnosis</div>'
+                    f'<div class="evidence-val-text">{ev_diag}</div>'
+                    f'<div class="evidence-header-label" style="margin-top: 1.1rem;">💊 Recommendation</div>'
+                    f'<ul class="evidence-bullet-list">{recs_html}</ul>'
+                    f'</div>'
+                )
                 with st.expander("📋 View Clinical Evidence", expanded=False):
-                    st.markdown(clinical_card_html, unsafe_allow_html=True)
+                    if hasattr(st, "html"):
+                        st.html(clinical_card_html)
+                    else:
+                        st.markdown(clinical_card_html, unsafe_allow_html=True)
 
             # Save latest state
             final_output = f"{retrieved_patient_ui}\n\n{answer}" if retrieved_patient_ui else answer
