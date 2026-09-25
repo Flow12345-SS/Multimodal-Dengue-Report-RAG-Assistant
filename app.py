@@ -1125,18 +1125,6 @@ with chat_container:
                 if ret_pname and ret_pname != "Not specified":
                     st.session_state.active_patient_display = f"{ret_pname} ({ret_pid or 'ID Unknown'})"
 
-            # Show Grounded Response Badge above Answer
-            grounded_badge_html = (
-                f'<div class="grounded-badge-container">'
-                f'<span class="grounded-pill">✅ Grounded Response</span>'
-                f'<span class="grounded-subtext">Retrieved from Bedrock Knowledge Base</span>'
-                f'</div>'
-            )
-            if hasattr(st, "html"):
-                st.html(grounded_badge_html)
-            else:
-                st.markdown(grounded_badge_html, unsafe_allow_html=True)
-
             # Show Answer Section in modern redesigned cards
             answer_cards_html = render_styled_answer_cards(answer)
             if hasattr(st, "html"):
