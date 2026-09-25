@@ -23,136 +23,154 @@ from ingest import init_directories, clean_directories, ingest_documents
 
 init_directories()
 
-# ── ReportLab PDF Export Utility ─────────────────────────────────────────────
-from reportlab.lib.pagesizes import letter
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-
+# ── ReportLab PDF Export Utility (Dynamic Import with Fallback) ───────────────
 def generate_answer_pdf(question: str, answer: str, patient_name: str) -> bytes:
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=letter,
-        rightMargin=45,
-        leftMargin=45,
-        topMargin=45,
-        bottomMargin=45
-    )
-    styles = getSampleStyleSheet()
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 
-    title_style = ParagraphStyle(
-        'DocTitle',
-        parent=styles['Normal'],
-        fontName='Helvetica-Bold',
-        fontSize=17,
-        leading=21,
-        textColor=colors.HexColor('#0F172A'),
-        spaceAfter=4
-    )
-    subtitle_style = ParagraphStyle(
-        'DocSubtitle',
-        parent=styles['Normal'],
-        fontName='Helvetica',
-        fontSize=10,
-        leading=14,
-        textColor=colors.HexColor('#0284C7'),
-        spaceAfter=14
-    )
-    meta_label = ParagraphStyle(
-        'MetaLabel',
-        parent=styles['Normal'],
-        fontName='Helvetica-Bold',
-        fontSize=9,
-        leading=13,
-        textColor=colors.HexColor('#334155')
-    )
-    meta_val = ParagraphStyle(
-        'MetaVal',
-        parent=styles['Normal'],
-        fontName='Helvetica',
-        fontSize=9,
-        leading=13,
-        textColor=colors.HexColor('#0F172A')
-    )
-    section_head = ParagraphStyle(
-        'SecHead',
-        parent=styles['Normal'],
-        fontName='Helvetica-Bold',
-        fontSize=12,
-        leading=16,
-        textColor=colors.HexColor('#0369A1'),
-        spaceBefore=12,
-        spaceAfter=6
-    )
-    body_style = ParagraphStyle(
-        'Body',
-        parent=styles['Normal'],
-        fontName='Helvetica',
-        fontSize=9.5,
-        leading=14.5,
-        textColor=colors.HexColor('#1E293B'),
-        spaceAfter=5
-    )
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=45,
+            leftMargin=45,
+            topMargin=45,
+            bottomMargin=45
+        )
+        styles = getSampleStyleSheet()
 
-    story = []
-    story.append(Paragraph("🩺 Multimodal Dengue Report RAG Assistant", title_style))
-    story.append(Paragraph("Clinical Decision Support System • Grounded Assessment Report", subtitle_style))
-    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#38BDF8'), spaceAfter=12))
+        title_style = ParagraphStyle(
+            'DocTitle',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=17,
+            leading=21,
+            textColor=colors.HexColor('#0F172A'),
+            spaceAfter=4
+        )
+        subtitle_style = ParagraphStyle(
+            'DocSubtitle',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=10,
+            leading=14,
+            textColor=colors.HexColor('#0284C7'),
+            spaceAfter=14
+        )
+        meta_label = ParagraphStyle(
+            'MetaLabel',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=9,
+            leading=13,
+            textColor=colors.HexColor('#334155')
+        )
+        meta_val = ParagraphStyle(
+            'MetaVal',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=9,
+            leading=13,
+            textColor=colors.HexColor('#0F172A')
+        )
+        section_head = ParagraphStyle(
+            'SecHead',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=12,
+            leading=16,
+            textColor=colors.HexColor('#0369A1'),
+            spaceBefore=12,
+            spaceAfter=6
+        )
+        body_style = ParagraphStyle(
+            'Body',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=9.5,
+            leading=14.5,
+            textColor=colors.HexColor('#1E293B'),
+            spaceAfter=5
+        )
 
-    timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    meta_data = [
-        [
-            Paragraph("<b>Patient Name:</b>", meta_label), Paragraph(str(patient_name), meta_val),
-            Paragraph("<b>Timestamp:</b>", meta_label), Paragraph(timestamp_str, meta_val)
-        ],
-        [
-            Paragraph("<b>Platform:</b>", meta_label), Paragraph("AWS Bedrock Knowledge Base", meta_val),
-            Paragraph("<b>Status:</b>", meta_label), Paragraph("Clinically Grounded Response", meta_val)
+        story = []
+        story.append(Paragraph("🩺 Multimodal Dengue Report RAG Assistant", title_style))
+        story.append(Paragraph("Clinical Decision Support System • Grounded Assessment Report", subtitle_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#38BDF8'), spaceAfter=12))
+
+        timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        meta_data = [
+            [
+                Paragraph("<b>Patient Name:</b>", meta_label), Paragraph(str(patient_name), meta_val),
+                Paragraph("<b>Timestamp:</b>", meta_label), Paragraph(timestamp_str, meta_val)
+            ],
+            [
+                Paragraph("<b>Platform:</b>", meta_label), Paragraph("AWS Bedrock Knowledge Base", meta_val),
+                Paragraph("<b>Status:</b>", meta_label), Paragraph("Clinically Grounded Response", meta_val)
+            ]
         ]
-    ]
-    t = Table(meta_data, colWidths=[80, 180, 80, 182])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F8FCFF')),
-        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#BAE6FD')),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E0F2FE')),
-        ('TOPPADDING', (0,0), (-1,-1), 5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-        ('LEFTPADDING', (0,0), (-1,-1), 8),
-        ('RIGHTPADDING', (0,0), (-1,-1), 8),
-    ]))
-    story.append(t)
-    story.append(Spacer(1, 14))
+        t = Table(meta_data, colWidths=[80, 180, 80, 182])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F8FCFF')),
+            ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#BAE6FD')),
+            ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E0F2FE')),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('LEFTPADDING', (0,0), (-1,-1), 8),
+            ('RIGHTPADDING', (0,0), (-1,-1), 8),
+        ]))
+        story.append(t)
+        story.append(Spacer(1, 14))
 
-    # Query Section
-    safe_q = question.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-    story.append(Paragraph("Clinical Query", section_head))
-    story.append(Paragraph(f"<b>Q:</b> {safe_q}", body_style))
-    story.append(Spacer(1, 10))
+        # Query Section
+        safe_q = question.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        story.append(Paragraph("Clinical Query", section_head))
+        story.append(Paragraph(f"<b>Q:</b> {safe_q}", body_style))
+        story.append(Spacer(1, 10))
 
-    # Answer Section
-    story.append(Paragraph("Synthesized Grounded Response", section_head))
-    for line in answer.split('\n'):
-        line_clean = line.strip()
-        if line_clean:
-            safe_l = line_clean.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-            safe_l = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', safe_l)
-            story.append(Paragraph(safe_l, body_style))
-        else:
-            story.append(Spacer(1, 4))
+        # Answer Section
+        story.append(Paragraph("Synthesized Grounded Response", section_head))
+        for line in answer.split('\n'):
+            line_clean = line.strip()
+            if line_clean:
+                safe_l = line_clean.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                safe_l = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', safe_l)
+                story.append(Paragraph(safe_l, body_style))
+            else:
+                story.append(Spacer(1, 4))
 
-    story.append(Spacer(1, 18))
-    story.append(HRFlowable(width="100%", thickness=0.75, color=colors.HexColor('#CBD5E1'), spaceAfter=8))
-    footer_text = Paragraph(
-        '<font size=7 color="#64748B">CONFIDENTIAL CLINICAL RECORD • For Decision Support Only • Powered by AWS Bedrock Knowledge Base + RAG</font>',
-        ParagraphStyle('Footer', parent=styles['Normal'], alignment=1)
-    )
-    story.append(footer_text)
+        story.append(Spacer(1, 18))
+        story.append(HRFlowable(width="100%", thickness=0.75, color=colors.HexColor('#CBD5E1'), spaceAfter=8))
+        footer_text = Paragraph(
+            '<font size=7 color="#64748B">CONFIDENTIAL CLINICAL RECORD • For Decision Support Only • Powered by AWS Bedrock Knowledge Base + RAG</font>',
+            ParagraphStyle('Footer', parent=styles['Normal'], alignment=1)
+        )
+        story.append(footer_text)
 
-    doc.build(story)
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
-    return pdf_bytes
+        doc.build(story)
+        pdf_bytes = buffer.getvalue()
+        buffer.close()
+        return pdf_bytes
+    except Exception as e:
+        # Fallback if ReportLab is not available
+        timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        txt_content = (
+            f"MULTIMODAL DENGUE REPORT RAG ASSISTANT\n"
+            f"Clinical Decision Support Assessment Report\n"
+            f"====================================================\n"
+            f"Patient: {patient_name}\n"
+            f"Timestamp: {timestamp_str}\n"
+            f"System: AWS Bedrock Knowledge Base + RAG\n"
+            f"====================================================\n\n"
+            f"CLINICAL QUERY:\n{question}\n\n"
+            f"SYNTHESIZED GROUNDED RESPONSE:\n{answer}\n\n"
+            f"====================================================\n"
+            f"CONFIDENTIAL MEDICAL INFORMATION - FOR CLINICAL DECISION SUPPORT ONLY\n"
+        )
+        return txt_content.encode("utf-8")
 
 # ── Modern Healthcare AI Application Theme (Sky Blue Theme) ───────────────────
 st.markdown("""
