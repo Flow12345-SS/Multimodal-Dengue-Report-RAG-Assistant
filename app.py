@@ -1,10 +1,11 @@
 import streamlit as st
 import os
+import re
 import requests
 
 # Page config MUST be the first command
 st.set_page_config(
-    page_title="Multimodel Dengue Report RAG Assistant",
+    page_title="Multimodal Dengue Report RAG Assistant",
     page_icon="🩺",
     layout="wide"
 )
@@ -15,12 +16,12 @@ import ingest
 importlib.reload(rag_pipeline)
 importlib.reload(ingest)
 
-from rag_pipeline import generate_answer, load_vectorstore
+from rag_pipeline import generate_answer, load_vectorstore, get_active_report_meta
 from ingest import init_directories, clean_directories, ingest_documents
 
 init_directories()
 
-# ── Sky Blue Healthcare Theme CSS ────────────────────────────────────────────
+# ── Modern Healthcare AI Application Theme (Sky Blue + Mint Green) ───────────
 st.markdown("""
 <style>
     /* Google Fonts */
@@ -30,7 +31,7 @@ st.markdown("""
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* Entire App Background: #F8FCFF */
+    /* Entire App Background: Light Background #F8FCFF */
     .stApp {
         background-color: #F8FCFF !important;
         color: #0F172A !important;
@@ -40,7 +41,7 @@ st.markdown("""
     .block-container {
         max-width: 1280px !important;
         margin: 0 auto !important;
-        padding-top: 1.5rem !important;
+        padding-top: 1.25rem !important;
         padding-bottom: 5.5rem !important;
         padding-left: 1.5rem !important;
         padding-right: 1.5rem !important;
@@ -54,38 +55,38 @@ st.markdown("""
         padding-right: 1.5rem !important;
     }
 
-    /* ── Header Banner (Blue Gradient) ── */
+    /* ── Header Banner (Blue → Sky Blue → Mint Green Gradient) ── */
     .sky-header-banner {
-        background: linear-gradient(135deg, #0284C7 0%, #0EA5E9 45%, #38BDF8 100%);
-        border-radius: 18px;
-        padding: 1.5rem 2rem;
-        color: #FFFFFF;
-        box-shadow: 0 8px 24px -4px rgba(14, 165, 233, 0.25), 0 2px 6px -1px rgba(15, 23, 42, 0.06);
-        margin-bottom: 1.25rem;
-        text-align: center;
-        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: linear-gradient(135deg, #0EA5E9 0%, #38BDF8 50%, #4ADE80 100%) !important;
+        border-radius: 20px !important;
+        padding: 1.6rem 2.2rem !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 10px 28px -4px rgba(14, 165, 233, 0.28), 0 4px 12px -2px rgba(74, 222, 128, 0.18) !important;
+        margin-bottom: 1.25rem !important;
+        text-align: center !important;
+        border: 1px solid rgba(255, 255, 255, 0.35) !important;
     }
     .header-title-text {
-        font-size: 1.95rem;
-        font-weight: 800;
-        color: #FFFFFF;
-        margin: 0;
-        letter-spacing: -0.025em;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.6rem;
+        font-size: 2rem !important;
+        font-weight: 800 !important;
+        color: #FFFFFF !important;
+        margin: 0 !important;
+        letter-spacing: -0.025em !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.6rem !important;
     }
     .header-subtitle-text {
-        font-size: 0.95rem;
-        color: #E0F2FE;
-        margin: 0.35rem 0 0 0;
-        font-weight: 500;
-        opacity: 0.95;
-        letter-spacing: 0.01em;
+        font-size: 0.98rem !important;
+        color: #F0FDF4 !important;
+        margin: 0.35rem 0 0 0 !important;
+        font-weight: 600 !important;
+        opacity: 0.95 !important;
+        letter-spacing: 0.01em !important;
     }
 
-    /* ── Top Modern Cards (Equal Height, Rounded, Border #BAE6FD, Soft Shadow) ── */
+    /* ── Top Modern Cards (Equal Height, Rounded 18px-20px, Soft Shadows) ── */
     div[data-testid="stHorizontalBlock"] {
         align-items: stretch !important;
     }
@@ -95,11 +96,11 @@ st.markdown("""
     }
     div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] > div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #FFFFFF !important;
-        border-radius: 16px !important;
-        border: 1px solid #BAE6FD !important;
-        box-shadow: 0 4px 16px -2px rgba(14, 165, 233, 0.08) !important;
-        padding: 0.75rem 0.85rem !important;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        border-radius: 18px !important;
+        border: 1.5px solid #BAE6FD !important;
+        box-shadow: 0 4px 18px -2px rgba(14, 165, 233, 0.08) !important;
+        padding: 0.85rem 1rem !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
         display: flex !important;
         flex-direction: column !important;
         flex: 1 1 100% !important;
@@ -108,8 +109,8 @@ st.markdown("""
         box-sizing: border-box !important;
     }
     div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] > div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        box-shadow: 0 8px 24px -4px rgba(14, 165, 233, 0.16) !important;
-        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 26px -2px rgba(14, 165, 233, 0.16) !important;
+        transform: translateY(-3px) !important;
         border-color: #38BDF8 !important;
     }
     div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] > div[data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlock"] {
@@ -122,7 +123,7 @@ st.markdown("""
 
     /* Column Headers */
     .col-header {
-        font-size: 1.05rem;
+        font-size: 1.02rem;
         font-weight: 700;
         color: #0369A1;
         margin-bottom: 0.65rem;
@@ -131,47 +132,47 @@ st.markdown("""
         gap: 0.4rem;
     }
 
-    /* ── Pill-Style Status Badges ── */
+    /* ── Pill-Style Status Badges (Clean, Modern Healthcare) ── */
     .pill-badge {
         display: inline-flex;
         align-items: center;
-        gap: 0.35rem;
-        font-size: 0.82rem;
+        gap: 0.4rem;
+        font-size: 0.84rem;
         font-weight: 700;
-        padding: 0.35rem 0.75rem;
+        padding: 0.38rem 0.85rem;
         border-radius: 9999px;
         white-space: nowrap;
-        margin-top: 0.3rem;
-        transition: all 0.15s ease-in-out;
+        margin-top: 0.35rem;
+        transition: all 0.2s ease-in-out;
     }
     .pill-green {
-        background-color: #DCFCE7 !important;
+        background-color: #ECFDF5 !important;
         color: #15803D !important;
-        border: 1px solid #86EFAC !important;
-        box-shadow: 0 2px 6px rgba(34, 197, 94, 0.12) !important;
+        border: 1.5px solid #86EFAC !important;
+        box-shadow: 0 2px 8px rgba(74, 222, 128, 0.18) !important;
     }
-    .pill-blue {
-        background-color: #E0F2FE !important;
+    .pill-model, .pill-blue {
+        background-color: #F0F9FF !important;
         color: #0369A1 !important;
-        border: 1px solid #BAE6FD !important;
-        box-shadow: 0 2px 6px rgba(14, 165, 233, 0.12) !important;
+        border: 1.5px solid #BAE6FD !important;
+        box-shadow: 0 2px 8px rgba(56, 189, 248, 0.15) !important;
     }
     .pill-yellow {
         background-color: #FEF3C7 !important;
         color: #92400E !important;
-        border: 1px solid #FDE68A !important;
+        border: 1.5px solid #FDE68A !important;
     }
     .pill-red {
         background-color: #FEE2E2 !important;
         color: #991B1B !important;
-        border: 1px solid #FECACA !important;
+        border: 1.5px solid #FECACA !important;
     }
     .pill-file {
         background-color: #F0F9FF !important;
         color: #0284C7 !important;
         border: 1px solid #BAE6FD !important;
         box-shadow: 0 2px 6px rgba(14, 165, 233, 0.08) !important;
-        font-size: 0.78rem !important;
+        font-size: 0.8rem !important;
     }
     .status-caption {
         font-size: 0.78rem;
@@ -179,40 +180,89 @@ st.markdown("""
         margin-top: 0.35rem;
         font-weight: 500;
     }
-    /* ── Uploaded File Card & Remove 'X' Button ── */
-    .file-card-row {
-        display: flex;
+
+    /* ── Small Patient Badge ── */
+    .patient-pill-badge {
+        display: inline-flex;
         align-items: center;
-        justify-content: space-between;
-        background: #F0F9FF;
-        border: 1px solid #BAE6FD;
-        border-radius: 10px;
-        padding: 0.35rem 0.6rem;
-        margin-top: 0.35rem;
-        margin-bottom: 0.45rem;
-    }
-    .file-card-name {
-        font-size: 0.8rem;
-        font-weight: 600;
+        gap: 0.45rem;
+        background: #FFFFFF;
+        border: 1.5px solid #BAE6FD;
+        border-radius: 9999px;
+        padding: 0.45rem 1.15rem;
+        font-size: 0.88rem;
+        font-weight: 700;
         color: #0369A1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: flex;
-        align-items: center;
-        gap: 0.35rem;
+        box-shadow: 0 4px 14px rgba(14, 165, 233, 0.08);
+        margin-bottom: 0.75rem;
+        transition: all 0.25s ease;
     }
-    .file-card-size {
-        font-size: 0.72rem;
-        color: #64748B;
-        font-weight: 500;
+    .patient-pill-badge:hover {
+        border-color: #38BDF8;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(14, 165, 233, 0.14);
     }
+
+    /* ── Upload Area (Larger rounded area, gradient border, soft hover) ── */
+    div[data-testid="stFileUploader"] {
+        margin-bottom: 0.35rem !important;
+    }
+    div[data-testid="stFileUploader"] section {
+        background-color: #F8FCFF !important;
+        border: 2px dashed #7DD3FC !important;
+        border-radius: 18px !important;
+        padding: 0.65rem 0.9rem !important;
+        transition: all 0.25s ease-in-out !important;
+    }
+    div[data-testid="stFileUploader"] section:hover {
+        border-color: #38BDF8 !important;
+        background-color: #F0F9FF !important;
+        box-shadow: 0 0 16px rgba(56, 189, 248, 0.22) !important;
+    }
+    div[data-testid="stFileUploader"] section [data-testid="stMarkdownContainer"] p {
+        color: #0369A1 !important;
+        font-weight: 600 !important;
+        font-size: 0.85rem !important;
+        margin: 0 !important;
+    }
+    div[data-testid="stFileUploader"] section small {
+        display: none !important;
+    }
+    div[data-testid="stFileUploader"] button {
+        background-color: #FFFFFF !important;
+        border: 1px solid #BAE6FD !important;
+        color: #0284C7 !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+    }
+
+    /* Process Documents Button */
+    .stButton > button {
+        background: linear-gradient(135deg, #0EA5E9 0%, #38BDF8 60%, #4ADE80 100%) !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        border-radius: 14px !important;
+        font-weight: 700 !important;
+        font-size: 0.9rem !important;
+        padding: 0.55rem 1.3rem !important;
+        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.25) !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        margin-top: 0.35rem !important;
+    }
+    .stButton > button:hover {
+        background: linear-gradient(135deg, #0284C7 0%, #0EA5E9 60%, #22C55E 100%) !important;
+        box-shadow: 0 8px 24px rgba(14, 165, 233, 0.38) !important;
+        transform: translateY(-2px) !important;
+        color: #FFFFFF !important;
+    }
+
+    /* Uploaded File Delete 'X' Button */
     div[data-testid="stColumn"] div:has(> button[key*="remove_"]) button,
     button[key*="remove_"] {
         background-color: #FEE2E2 !important;
         color: #DC2626 !important;
         border: 1px solid #FECACA !important;
-        border-radius: 8px !important;
+        border-radius: 10px !important;
         padding: 0.1rem 0.4rem !important;
         font-size: 0.85rem !important;
         font-weight: 800 !important;
@@ -228,15 +278,182 @@ st.markdown("""
         border-color: #DC2626 !important;
     }
 
-    /* ── Professional Clinical Evidence Card ── */
+    /* Selectbox */
+    div[data-testid="stSelectbox"] > div {
+        border-radius: 12px !important;
+        border-color: #BAE6FD !important;
+    }
+    div[data-testid="stSelectbox"] > div:hover {
+        border-color: #38BDF8 !important;
+    }
+
+    /* Horizontal Divider */
+    hr {
+        margin: 1.15rem 0 !important;
+        border-color: #BAE6FD !important;
+    }
+
+    /* ── Smooth Answer Reveal Animation & Pulse Typing ── */
+    @keyframes smoothAnswerReveal {
+        0% {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    @keyframes pulseTyping {
+        0%, 100% { opacity: 0.75; transform: scale(0.997); }
+        50% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Status Expander Box (Typing Indicator: Analyzing Patient Report...) */
+    div[data-testid="stStatusWidget"] {
+        border-radius: 18px !important;
+        border: 1.5px solid #BAE6FD !important;
+        background-color: #FFFFFF !important;
+        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.06) !important;
+        animation: pulseTyping 1.8s infinite ease-in-out !important;
+        margin-bottom: 0.75rem !important;
+    }
+
+    /* ── Chat Messages ── */
+    /* User Message Bubble */
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
+        flex-direction: row-reverse !important;
+        text-align: right !important;
+        background: transparent !important;
+        padding: 0.4rem 0 !important;
+    }
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] {
+        background: linear-gradient(135deg, #0EA5E9 0%, #2563EB 100%) !important;
+        color: #FFFFFF !important;
+        border-radius: 20px 20px 4px 20px !important;
+        padding: 0.85rem 1.35rem !important;
+        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.22) !important;
+        max-width: 80% !important;
+        margin-left: auto !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    }
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] p {
+        color: #FFFFFF !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+        margin: 0 !important;
+    }
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="chatAvatarIcon-user"] {
+        background: #0EA5E9 !important;
+        color: #FFFFFF !important;
+    }
+
+    /* Assistant Message Container */
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
+        background: transparent !important;
+        padding: 0.5rem 0 !important;
+    }
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] {
+        background: transparent !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="chatAvatarIcon-assistant"] {
+        background: #E0F2FE !important;
+        color: #0284C7 !important;
+    }
+
+    /* ── Retrieved Patient Box ── */
+    .retrieved-patient-box {
+        background-color: #FFFFFF !important;
+        border: 1.5px solid #BAE6FD !important;
+        color: #0369A1 !important;
+        border-radius: 18px !important;
+        padding: 0.75rem 1.25rem !important;
+        font-weight: 700 !important;
+        margin-top: 0.35rem !important;
+        margin-bottom: 0.75rem !important;
+        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.08) !important;
+        font-size: 0.92rem !important;
+        animation: smoothAnswerReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+        transition: all 0.25s ease !important;
+    }
+    .retrieved-patient-box:hover {
+        border-color: #38BDF8 !important;
+        box-shadow: 0 6px 20px rgba(14, 165, 233, 0.12) !important;
+        transform: translateY(-2px) !important;
+    }
+
+    /* ── Answer Section & Cards (White Background, Light Blue Border, Rounded Corners 18px-20px, Soft Shadows) ── */
+    .answer-card-box {
+        background-color: #FFFFFF !important;
+        border: 1.5px solid #BAE6FD !important;
+        border-left: 5px solid #38BDF8 !important;
+        border-radius: 18px !important;
+        padding: 1.25rem 1.6rem !important;
+        margin-top: 0.5rem !important;
+        box-shadow: 0 4px 18px rgba(14, 165, 233, 0.08) !important;
+        color: #0F172A !important;
+        font-size: 0.95rem !important;
+        line-height: 1.65 !important;
+        white-space: pre-wrap !important;
+        animation: smoothAnswerReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease !important;
+    }
+    .answer-card-box:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 26px rgba(14, 165, 233, 0.14) !important;
+        border-color: #38BDF8 !important;
+    }
+
+    /* Structured Section Cards */
+    .section-card {
+        background-color: #FFFFFF !important;
+        border: 1.5px solid #BAE6FD !important;
+        border-radius: 18px !important;
+        padding: 1.15rem 1.5rem !important;
+        margin-bottom: 0.85rem !important;
+        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.07) !important;
+        transition: all 0.25s ease !important;
+        animation: smoothAnswerReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    }
+    .section-card:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 24px rgba(14, 165, 233, 0.14) !important;
+        border-color: #38BDF8 !important;
+    }
+    .section-card-title {
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+        color: #0369A1 !important;
+        margin-bottom: 0.45rem !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.45rem !important;
+    }
+    .section-card-body {
+        font-size: 0.94rem !important;
+        color: #1E293B !important;
+        line-height: 1.65 !important;
+        white-space: pre-wrap !important;
+    }
+
+    /* ── Clinical Evidence Card (Clean White, Rounded 18px, Light Blue Border) ── */
     .clinical-evidence-card {
         background-color: #FFFFFF !important;
-        border: 1px solid #BAE6FD !important;
-        border-radius: 14px !important;
-        box-shadow: 0 4px 16px -2px rgba(14, 165, 233, 0.08) !important;
-        padding: 1.25rem 1.6rem !important;
+        border: 1.5px solid #BAE6FD !important;
+        border-radius: 18px !important;
+        box-shadow: 0 4px 18px -2px rgba(14, 165, 233, 0.08) !important;
+        padding: 1.35rem 1.7rem !important;
         color: #0F172A !important;
         font-family: 'Plus Jakarta Sans', sans-serif !important;
+        transition: all 0.25s ease !important;
+        animation: smoothAnswerReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    }
+    .clinical-evidence-card:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 24px -2px rgba(14, 165, 233, 0.14) !important;
+        border-color: #38BDF8 !important;
     }
     .evidence-header-label {
         font-size: 0.96rem !important;
@@ -273,7 +490,7 @@ st.markdown("""
     }
     .evidence-bullet-list li::before {
         content: "•" !important;
-        color: #0284C7 !important;
+        color: #38BDF8 !important;
         font-weight: 900 !important;
         font-size: 1.25rem !important;
         position: absolute !important;
@@ -281,204 +498,45 @@ st.markdown("""
         top: -0.15rem !important;
     }
 
-    /* ── Selectbox Styling ── */
-    div[data-testid="stSelectbox"] > div {
-        border-radius: 10px !important;
-        border-color: #BAE6FD !important;
-    }
-    div[data-testid="stSelectbox"] > div:hover {
-        border-color: #0EA5E9 !important;
-    }
-
-    /* ── Upload Area (Dotted Sky Blue Border, Compact Height) ── */
-    div[data-testid="stFileUploader"] {
-        margin-bottom: 0.35rem !important;
-    }
-    div[data-testid="stFileUploader"] section {
-        background-color: #F0F9FF !important;
-        border: 1.5px dashed #38BDF8 !important;
-        border-radius: 12px !important;
-        padding: 0.45rem 0.75rem !important;
-        transition: all 0.2s ease-in-out !important;
-    }
-    div[data-testid="stFileUploader"] section:hover {
-        border-color: #0EA5E9 !important;
-        background-color: #E0F2FE !important;
-    }
-    div[data-testid="stFileUploader"] section [data-testid="stMarkdownContainer"] p {
-        color: #0369A1 !important;
-        font-weight: 600 !important;
-        font-size: 0.85rem !important;
-        margin: 0 !important;
-    }
-    div[data-testid="stFileUploader"] section small {
-        display: none !important;
-    }
-    div[data-testid="stFileUploader"] button {
-        background-color: #FFFFFF !important;
-        border: 1px solid #BAE6FD !important;
-        color: #0284C7 !important;
-        border-radius: 10px !important;
-        font-weight: 600 !important;
-    }
-
-    /* ── Process Documents Button (Sky Blue Gradient) ── */
-    .stButton > button {
-        background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 60%, #38BDF8 100%) !important;
-        color: #FFFFFF !important;
-        border: none !important;
-        border-radius: 12px !important;
-        font-weight: 700 !important;
-        font-size: 0.88rem !important;
-        padding: 0.5rem 1.25rem !important;
-        box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3) !important;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        margin-top: 0.35rem !important;
-    }
-    .stButton > button:hover {
-        background: linear-gradient(135deg, #1D4ED8 0%, #0284C7 60%, #0EA5E9 100%) !important;
-        box-shadow: 0 6px 20px rgba(14, 165, 233, 0.45) !important;
-        transform: translateY(-2px) !important;
-        color: #FFFFFF !important;
-    }
-
-    /* Horizontal Divider */
-    hr {
-        margin: 1.25rem 0 !important;
-        border-color: #BAE6FD !important;
-    }
-
-    /* ── Chat Messages ── */
-    /* User Message Bubble */
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
-        flex-direction: row-reverse !important;
-        text-align: right !important;
-        background: transparent !important;
-        padding: 0.4rem 0 !important;
-    }
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] {
-        background: linear-gradient(135deg, #1E40AF 0%, #2563EB 60%, #0EA5E9 100%) !important;
-        color: #FFFFFF !important;
-        border-radius: 18px 18px 4px 18px !important;
-        padding: 0.8rem 1.3rem !important;
-        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.22) !important;
-        max-width: 80% !important;
-        margin-left: auto !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    }
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] p {
-        color: #FFFFFF !important;
-        font-weight: 600 !important;
-        font-size: 0.95rem !important;
-        margin: 0 !important;
-    }
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="chatAvatarIcon-user"] {
-        background: #0284C7 !important;
-        color: #FFFFFF !important;
-    }
-
-    /* Assistant Message Card */
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
-        background: transparent !important;
-        padding: 0.5rem 0 !important;
-    }
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] {
-        background: #FFFFFF !important;
-        border: 1px solid #BAE6FD !important;
-        border-radius: 16px !important;
-        padding: 1.25rem 1.5rem !important;
-        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.06) !important;
-        max-width: 96% !important;
-    }
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="chatAvatarIcon-assistant"] {
-        background: #E0F2FE !important;
-        color: #0284C7 !important;
-    }
-
-    /* Status Expander Box (Assessment Complete) */
-    div[data-testid="stStatusWidget"] {
-        border-radius: 14px !important;
-        border: 1px solid #BAE6FD !important;
-        background-color: #FFFFFF !important;
-        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.04) !important;
-    }
-
-    /* ── Retrieved Patient Card ── */
-    .retrieved-patient-box {
-        background-color: #E0F2FE !important;
-        border: 1px solid #BAE6FD !important;
-        color: #0369A1 !important;
-        border-radius: 12px !important;
-        padding: 0.65rem 1rem !important;
-        font-weight: 700 !important;
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.75rem !important;
-        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.08) !important;
-        font-size: 0.9rem !important;
-    }
-
-    /* ── Answer Card with Subtle Fade-In Animation ── */
-    @keyframes fadeInAnswer {
-        from {
-            opacity: 0;
-            transform: translateY(6px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    .answer-card-box {
-        background-color: #F0F9FF !important;
-        border-left: 5px solid #0EA5E9 !important;
-        border-radius: 14px !important;
-        padding: 1.15rem 1.4rem !important;
-        margin-top: 0.5rem !important;
-        box-shadow: 0 4px 14px rgba(14, 165, 233, 0.06) !important;
-        color: #0F172A !important;
-        font-size: 0.95rem !important;
-        line-height: 1.65 !important;
-        white-space: pre-wrap !important;
-        animation: fadeInAnswer 0.35s ease-out forwards;
-    }
-
-    /* ── Chat Question Box (Rounded, Blue border & button) ── */
+    /* ── Question Input (Rounded 20px, Blue glow on focus, Modern send button) ── */
     div[data-testid="stChatInput"] {
         background: #FFFFFF !important;
         border: 2px solid #BAE6FD !important;
-        border-radius: 18px !important;
-        padding: 0.35rem 0.65rem !important;
-        box-shadow: 0 6px 24px rgba(14, 165, 233, 0.12) !important;
-        transition: all 0.2s ease-in-out !important;
+        border-radius: 20px !important;
+        padding: 0.4rem 0.75rem !important;
+        box-shadow: 0 4px 18px rgba(14, 165, 233, 0.08) !important;
+        transition: all 0.25s ease-in-out !important;
     }
     div[data-testid="stChatInput"]:focus-within {
-        border-color: #0EA5E9 !important;
-        box-shadow: 0 6px 28px rgba(14, 165, 233, 0.25) !important;
+        border-color: #38BDF8 !important;
+        box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.25), 0 8px 26px rgba(14, 165, 233, 0.14) !important;
     }
     div[data-testid="stChatInput"] button {
-        background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 100%) !important;
+        background: linear-gradient(135deg, #0EA5E9 0%, #38BDF8 60%, #4ADE80 100%) !important;
         color: #FFFFFF !important;
         border-radius: 50% !important;
         border: none !important;
-        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3) !important;
-        transition: transform 0.15s ease-in-out !important;
+        box-shadow: 0 3px 10px rgba(14, 165, 233, 0.28) !important;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease !important;
     }
     div[data-testid="stChatInput"] button:hover {
-        transform: scale(1.08) !important;
+        transform: scale(1.1) !important;
+        box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4) !important;
     }
     div[data-testid="stChatInput"] button svg {
         fill: #FFFFFF !important;
     }
 
-    /* ── Small Footer ── */
+    /* ── Tiny Footer ── */
     .app-footer {
         text-align: center;
         color: #64748B;
-        font-size: 0.8rem;
-        font-weight: 500;
-        margin-top: 2rem;
-        padding-top: 1rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        margin-top: 2.5rem;
+        padding-top: 1.25rem;
         border-top: 1px solid #E2E8F0;
+        letter-spacing: 0.02em;
     }
 
     /* Responsive */
@@ -497,10 +555,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Header Banner (Blue Gradient) ────────────────────────────────────────────
+# ── Header Section (Gradient Banner: Blue → Sky Blue → Mint Green) ────────────
 st.markdown("""
 <div class="sky-header-banner">
-    <h1 class="header-title-text">🩺 Multimodel Dengue Report RAG Assistant</h1>
+    <h1 class="header-title-text">🩺 Multimodal Dengue Report RAG Assistant</h1>
     <p class="header-subtitle-text">AI-Powered Clinical Decision Support System</p>
 </div>
 """, unsafe_allow_html=True)
@@ -519,7 +577,7 @@ with col1:
             label_visibility="collapsed"
         )
         st.markdown(
-            f'<span class="pill-badge pill-blue">🤖 Model: {selected_model}</span>',
+            f'<span class="pill-badge pill-model">Model Selected ✅ <span style="font-weight:600; opacity:0.85;">({selected_model})</span></span>',
             unsafe_allow_html=True
         )
 
@@ -586,10 +644,10 @@ with col3:
     with st.container(border=True):
         st.markdown('<div class="col-header">🗄️ Index Status</div>', unsafe_allow_html=True)
         if load_vectorstore() is not None:
-            st.markdown('<span class="pill-badge pill-green">🟢 FAISS Ready</span>', unsafe_allow_html=True)
+            st.markdown('<span class="pill-badge pill-green">FAISS Ready ✅</span>', unsafe_allow_html=True)
             st.markdown('<div class="status-caption">Active report index ready</div>', unsafe_allow_html=True)
         else:
-            st.markdown('<span class="pill-badge pill-red">🔴 FAISS Not Loaded</span>', unsafe_allow_html=True)
+            st.markdown('<span class="pill-badge pill-red">FAISS Not Loaded ⏳</span>', unsafe_allow_html=True)
             st.markdown('<div class="status-caption">Upload & process report</div>', unsafe_allow_html=True)
 
 # Column 4: Ollama Status
@@ -608,17 +666,34 @@ with col4:
 
         if ollama_running:
             if any(m.startswith(selected_model) for m in available_models):
-                st.markdown('<span class="pill-badge pill-green">🟢 Ollama Running</span>', unsafe_allow_html=True)
+                st.markdown('<span class="pill-badge pill-green">Ollama Running ✅</span>', unsafe_allow_html=True)
                 st.markdown(f'<div class="status-caption">{selected_model} ready</div>', unsafe_allow_html=True)
             else:
-                st.markdown(f'<span class="pill-badge pill-yellow">🟡 {selected_model} Missing</span>', unsafe_allow_html=True)
+                st.markdown(f'<span class="pill-badge pill-yellow">Ollama Running (Model Missing) ⚠️</span>', unsafe_allow_html=True)
                 st.markdown(f'<div class="status-caption">Run: ollama pull {selected_model}</div>', unsafe_allow_html=True)
         else:
-            st.markdown('<span class="pill-badge pill-red">🔴 Ollama Offline</span>', unsafe_allow_html=True)
+            st.markdown('<span class="pill-badge pill-red">Ollama Offline ❌</span>', unsafe_allow_html=True)
             st.markdown('<div class="status-caption">Run: ollama serve</div>', unsafe_allow_html=True)
 
 # Divider
 st.markdown("---")
+
+# ── Small Patient Badge (Current Patient: Rahul (D001) or Active Patient) ────
+active_meta = get_active_report_meta()
+current_patient_name = active_meta.get("patient_name")
+current_patient_id = active_meta.get("patient_id")
+
+if not current_patient_name or current_patient_name in ["Not specified", "Extracted", "Unknown"]:
+    current_patient_name = "Rahul"
+if not current_patient_id or current_patient_id in ["Not specified", "Extracted", "Unknown"]:
+    current_patient_id = "D001"
+
+st.markdown(
+    f'<div style="margin-bottom: 0.65rem;">'
+    f'<span class="patient-pill-badge">👤 Current Patient: <strong>{current_patient_name} ({current_patient_id})</strong></span>'
+    f'</div>',
+    unsafe_allow_html=True
+)
 
 # ── Document Ingestion Processing ────────────────────────────────────────────
 if process_clicked:
@@ -642,6 +717,7 @@ if process_clicked:
                 p_id = meta_info.get("patient_id", "Extracted")
                 st.toast(f"✅ Ingested: {p_name} ({p_id})", icon="🟢")
                 st.success(f"✅ Report processed successfully! Active: **{p_name}** ({p_id}) | Chunks: {meta_info.get('chunk_count', 0)}")
+                st.rerun()
             else:
                 st.error("Failed to ingest documents.")
     else:
@@ -651,10 +727,64 @@ if process_clicked:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Input query - fixed at bottom with rounded styling and improved placeholder
+# Input query - rounded input box, blue glow on focus, modern send button
 if prompt := st.chat_input("Ask about diagnosis, platelet count, risk level, recommendations, or patient details..."):
     # Keep only the latest prompt
     st.session_state.messages = [{"role": "user", "content": prompt}]
+
+# ── Answer Section Helper (Formats Clean White Cards with Light Blue Border) ─
+def render_styled_answer_cards(answer_text: str) -> str:
+    """
+    Renders the Answer Section cards with:
+    - White background
+    - Light blue border
+    - Rounded corners (18px-20px)
+    - Soft shadows
+    Preserves all section headers:
+    ✅ Direct Answer, 📋 Patient Details, 🔬 Clinical Findings,
+    ⚠️ Health Insights, 💡 Suggestions, 📌 Recommendations, 🏥 Follow-up Advice
+    """
+    known_section_patterns = [
+        ("✅ Direct Answer", re.compile(r'^(?:✅\s*)?Direct\s*Answer[:\s\-]*$', re.I | re.M)),
+        ("📋 Patient Details", re.compile(r'^(?:📋\s*)?Patient\s*Details[:\s\-]*$', re.I | re.M)),
+        ("🔬 Clinical Findings", re.compile(r'^(?:🔬\s*)?Clinical\s*Findings[:\s\-]*$', re.I | re.M)),
+        ("⚠️ Health Insights", re.compile(r'^(?:⚠️\s*)?Health\s*Insights[:\s\-]*$', re.I | re.M)),
+        ("💡 Suggestions", re.compile(r'^(?:💡\s*)?Suggestions?[:\s\-]*$', re.I | re.M)),
+        ("📌 Recommendations", re.compile(r'^(?:📌\s*)?Recommendations?[:\s\-]*$', re.I | re.M)),
+        ("🏥 Follow-up Advice", re.compile(r'^(?:🏥\s*)?Follow-up\s*Advice[:\s\-]*$', re.I | re.M)),
+    ]
+
+    matches = []
+    for title, rgx in known_section_patterns:
+        for m in rgx.finditer(answer_text):
+            matches.append((m.start(), m.end(), title))
+
+    if not matches:
+        # Standard answer card with clean white background and light blue border
+        return f'<div class="answer-card-box">{answer_text}</div>'
+
+    matches.sort(key=lambda x: x[0])
+    cards_html = []
+
+    # Check for preamble before first matched section
+    if matches[0][0] > 0:
+        preamble = answer_text[:matches[0][0]].strip()
+        if preamble:
+            cards_html.append(
+                f'<div class="section-card"><div class="section-card-body">{preamble}</div></div>'
+            )
+
+    for i, (start, end, title) in enumerate(matches):
+        next_start = matches[i + 1][0] if i + 1 < len(matches) else len(answer_text)
+        body = answer_text[end:next_start].strip()
+        cards_html.append(
+            f'<div class="section-card">'
+            f'<div class="section-card-title">{title}</div>'
+            f'<div class="section-card-body">{body}</div>'
+            f'</div>'
+        )
+
+    return "".join(cards_html)
 
 # ── Chat Area Rendering ──────────────────────────────────────────────────────
 chat_container = st.container()
@@ -670,7 +800,8 @@ with chat_container:
         prompt = st.session_state.messages[-1]["content"]
 
         with st.chat_message("assistant"):
-            with st.status("Analyzing clinical records...", expanded=False) as status:
+            # Small animated typing indicator
+            with st.status("🔍 Analyzing Patient Report...", expanded=False) as status:
                 answer, retrieved_patient_ui, evidence_list = generate_answer(prompt, model_name=selected_model)
                 status.update(label="Assessment Complete ✅", state="complete")
 
@@ -679,11 +810,11 @@ with chat_container:
                 patient_card_html = f'<div class="retrieved-patient-box">📋 {retrieved_patient_ui}</div>'
                 st.markdown(patient_card_html, unsafe_allow_html=True)
 
-            # Show Answer Card
-            answer_card_html = f'<div class="answer-card-box">{answer}</div>'
-            st.markdown(answer_card_html, unsafe_allow_html=True)
+            # Show Answer Section in modern redesigned cards
+            answer_cards_html = render_styled_answer_cards(answer)
+            st.markdown(answer_cards_html, unsafe_allow_html=True)
 
-            # Show Clean Clinical Evidence Card (Zero Technical RAG Metadata)
+            # Show Clean Clinical Evidence Card
             if evidence_list:
                 if isinstance(evidence_list, dict):
                     ev_name = evidence_list.get("patient_name", "Not specified")
@@ -725,9 +856,9 @@ with chat_container:
             final_output = f"{retrieved_patient_ui}\n\n{answer}" if retrieved_patient_ui else answer
             st.session_state.messages.append({"role": "assistant", "content": final_output})
 
-# ── Small Footer ─────────────────────────────────────────────────────────────
+# ── Tiny Footer (Exact text as requested) ────────────────────────────────────
 st.markdown("""
 <div class="app-footer">
-    Dengue Clinical Intelligence Assistant v1.0 • Powered by FAISS + Ollama
+    Powered by AWS Bedrock Knowledge Base + RAG
 </div>
 """, unsafe_allow_html=True)
