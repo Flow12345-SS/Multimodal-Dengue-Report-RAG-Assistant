@@ -15,11 +15,20 @@ st.set_page_config(
 import importlib
 import rag_pipeline
 import ingest
+import utils.multilingual as multilingual
 importlib.reload(rag_pipeline)
 importlib.reload(ingest)
+importlib.reload(multilingual)
 
 from rag_pipeline import generate_answer, load_vectorstore, get_active_report_meta
 from ingest import init_directories, clean_directories, ingest_documents
+from utils.multilingual import (
+    SUPPORTED_LANGUAGES,
+    detect_language,
+    translate_text,
+    text_to_speech_audio,
+    transcribe_audio_bytes,
+)
 
 init_directories()
 
@@ -547,6 +556,59 @@ st.markdown("""
         border-color: #BAE6FD !important;
     }
 
+    /* ── Multilingual & Voice Assistant Styling ── */
+    .voice-control-panel {
+        background-color: #FFFFFF !important;
+        border: 1.5px solid #BAE6FD !important;
+        border-radius: 18px !important;
+        padding: 0.95rem 1.25rem !important;
+        box-shadow: 0 4px 18px -2px rgba(14, 165, 233, 0.08) !important;
+        margin-bottom: 0.85rem !important;
+        transition: all 0.25s ease !important;
+    }
+    .voice-control-panel:hover {
+        border-color: #38BDF8 !important;
+        box-shadow: 0 8px 24px -2px rgba(14, 165, 233, 0.14) !important;
+    }
+    .voice-badge-active {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: #F0FDF4;
+        border: 1.5px solid #86EFAC;
+        border-radius: 9999px;
+        padding: 0.35rem 0.85rem;
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #15803D;
+        box-shadow: 0 2px 8px rgba(74, 222, 128, 0.15);
+    }
+    div[data-testid="stAudioInput"] {
+        background-color: #F8FCFF !important;
+        border: 1.5px solid #BAE6FD !important;
+        border-radius: 16px !important;
+        padding: 0.45rem 0.85rem !important;
+        transition: all 0.2s ease !important;
+    }
+    div[data-testid="stAudioInput"]:hover {
+        border-color: #38BDF8 !important;
+        box-shadow: 0 4px 14px rgba(14, 165, 233, 0.12) !important;
+    }
+    .listen-btn-container button {
+        background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%) !important;
+        color: #FFFFFF !important;
+        border-radius: 12px !important;
+        font-weight: 700 !important;
+        font-size: 0.86rem !important;
+        border: none !important;
+        box-shadow: 0 3px 10px rgba(14, 165, 233, 0.22) !important;
+        transition: all 0.2s ease !important;
+    }
+    .listen-btn-container button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 16px rgba(14, 165, 233, 0.35) !important;
+    }
+
     /* ── Smooth Answer Reveal Animation & Pulse Typing ── */
     @keyframes smoothAnswerReveal {
         0% {
@@ -993,6 +1055,93 @@ if "recent_questions" not in st.session_state:
         "What is the risk level?"
     ]
 
+# ── Multilingual Voice Assistant Controls (Sky Blue Healthcare Card) ────────
+with st.container(border=True):
+    col_vlang, col_vtrans, col_vmode = st.columns([0.34, 0.33, 0.33])
+    with col_vlang:
+        selected_language = st.selectbox(
+            "🌐 Language",
+            options=["English", "Hindi", "Kannada", "Telugu", "Tamil", "Marathi"],
+            index=0,
+            key="ui_language_select",
+            help="Choose language for voice input, translation, and voice playback"
+        )
+    with col_vtrans:
+        st.markdown("<div style='height: 1.7rem;'></div>", unsafe_allow_html=True)
+        translate_responses = st.toggle(
+            "🌐 Translate Responses",
+            value=(selected_language != "English"),
+            key="ui_translate_responses_toggle",
+            help="Translate clinical answers into the selected language"
+        )
+    with col_vmode:
+        st.markdown("<div style='height: 1.7rem;'></div>", unsafe_allow_html=True)
+        voice_assistant_mode = st.toggle(
+            "🎙️ Voice Assistant Mode",
+            value=False,
+            key="ui_voice_assistant_mode_toggle",
+            help="Hands-free assistant: Speak -> Retrieve -> Auto-spoken response"
+        )
+
+    # Voice Input Control
+    st.markdown(
+        f'<div style="font-size: 0.88rem; font-weight: 700; color: #0369A1; margin-top: 0.35rem; margin-bottom: 0.25rem;">'
+        f'🎤 Voice Input <span style="font-weight: 500; font-size: 0.8rem; color: #64748B;">(Click mic to speak in <b>{selected_language}</b>)</span>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+    audio_voice_file = st.audio_input(
+        label=f"Speak question in {selected_language}",
+        label_visibility="collapsed",
+        key=f"audio_mic_input_{selected_language}"
+    )
+
+    if audio_voice_file is not None:
+        raw_audio_bytes = audio_voice_file.getvalue()
+        audio_fingerprint = hash(raw_audio_bytes)
+        if st.session_state.get("last_processed_audio_hash") != audio_fingerprint:
+            st.session_state.last_processed_audio_hash = audio_fingerprint
+            with st.spinner(f"Transcribing voice input in {selected_language}..."):
+                v_ok, v_text = transcribe_audio_bytes(raw_audio_bytes, lang=selected_language)
+            if v_ok and v_text.strip():
+                if voice_assistant_mode:
+                    if v_text not in st.session_state.recent_questions:
+                        st.session_state.recent_questions.insert(0, v_text)
+                        st.session_state.recent_questions = st.session_state.recent_questions[:5]
+                    st.session_state.messages = [{"role": "user", "content": v_text}]
+                    st.session_state.auto_speak_answer = True
+                    st.rerun()
+                else:
+                    st.session_state.pending_voice_query = v_text
+                    st.rerun()
+            else:
+                st.warning(f"Voice recognition: {v_text}. Please speak clearly into the microphone.")
+
+    # Show pending voice query if voice assistant mode is not automatically submitting
+    if st.session_state.get("pending_voice_query"):
+        with st.container(border=True):
+            st.markdown(
+                f'<div style="font-size: 0.92rem; color: #0284C7; font-weight: 600; margin-bottom: 0.35rem;">'
+                f'🎤 <b>Voice Input Recognized:</b> "{st.session_state.pending_voice_query}"'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+            col_v1, col_v2 = st.columns([0.3, 0.7])
+            with col_v1:
+                if st.button("🚀 Submit Question", key="btn_submit_pending_voice", use_container_width=True):
+                    v_prompt = st.session_state.pending_voice_query
+                    del st.session_state.pending_voice_query
+                    if v_prompt not in st.session_state.recent_questions:
+                        st.session_state.recent_questions.insert(0, v_prompt)
+                        st.session_state.recent_questions = st.session_state.recent_questions[:5]
+                    st.session_state.messages = [{"role": "user", "content": v_prompt}]
+                    st.rerun()
+            with col_v2:
+                if st.button("✕ Discard", key="btn_discard_pending_voice"):
+                    del st.session_state.pending_voice_query
+                    st.rerun()
+
 # ── Suggested Questions Section (Clickable Pills - Shown After Processing Report) ─
 if st.session_state.get("report_processed") and st.session_state.get("active_patient_display"):
     st.markdown("""
@@ -1051,13 +1200,13 @@ def render_styled_answer_cards(answer_text: str) -> str:
     ⚠️ Health Insights, 💡 Suggestions, 📌 Recommendations, 🏥 Follow-up Advice
     """
     known_section_patterns = [
-        ("✅ Direct Answer", re.compile(r'^(?:✅\s*)?Direct\s*Answer[:\s\-]*$', re.I | re.M)),
-        ("📋 Patient Details", re.compile(r'^(?:📋\s*)?Patient\s*Details[:\s\-]*$', re.I | re.M)),
-        ("🔬 Clinical Findings", re.compile(r'^(?:🔬\s*)?Clinical\s*Findings[:\s\-]*$', re.I | re.M)),
-        ("⚠️ Health Insights", re.compile(r'^(?:⚠️\s*)?Health\s*Insights[:\s\-]*$', re.I | re.M)),
-        ("💡 Suggestions", re.compile(r'^(?:💡\s*)?Suggestions?[:\s\-]*$', re.I | re.M)),
-        ("📌 Recommendations", re.compile(r'^(?:📌\s*)?Recommendations?[:\s\-]*$', re.I | re.M)),
-        ("🏥 Follow-up Advice", re.compile(r'^(?:🏥\s*)?Follow-up\s*Advice[:\s\-]*$', re.I | re.M)),
+        ("✅ Direct Answer", re.compile(r'^(?:✅\s*)?(?:Direct\s*Answer|प्रत्यक्ष\s*उत्तर|थेट\s*उत्तर|ನೇರ\s*ಉತ್ತರ|ప్రత్యక్ష\s*సమాధానం|நேரடி\s*பதில்)[:\s\-]*$', re.I | re.M)),
+        ("📋 Patient Details", re.compile(r'^(?:📋\s*)?(?:Patient\s*Details|रोगी\s*विवरण|रुग्ण\s*तपशील|ರೋಗಿಯ\s*ವಿವರಗಳು|రోగి\s*వివరాలు|நோயாளி\s*விவரங்கள்)[:\s\-]*$', re.I | re.M)),
+        ("🔬 Clinical Findings", re.compile(r'^(?:🔬\s*)?(?:Clinical\s*Findings|नैदानिक\s*निष्कर्ष|वैद्यकीय\s*निष्कर्ष|ಕ್ಲಿನಿಕಲ್\s*ಫಲಿತಾಂಶಗಳು|క్లినికల్\s*కనుగొన్నవి|மருத்துவ\s*முடிவுகள்)[:\s\-]*$', re.I | re.M)),
+        ("⚠️ Health Insights", re.compile(r'^(?:⚠️\s*)?(?:Health\s*Insights|स्वास्थ्य\s*संकेत|आरोग्य\s*अंतर्दृष्टी|ಆರೋಗ್ಯ\s*ಒಳನೋಟಗಳು|ఆరోగ్య\s*అంతర్దృష్టులు|சுகாதார\s*நுண்ணறிவு)[:\s\-]*$', re.I | re.M)),
+        ("💡 Suggestions", re.compile(r'^(?:💡\s*)?(?:Suggestions?|सुझाव|सूचना|ಸಲಹೆಗಳು|సూచనలు|பரிந்துரைகள்)[:\s\-]*$', re.I | re.M)),
+        ("📌 Recommendations", re.compile(r'^(?:📌\s*)?(?:Recommendations?|सिफारिशें|शिफारसी|ಶಿಫಾರಸುಗಳು|సిఫార్సులు|பரிந்துரைகள்)[:\s\-]*$', re.I | re.M)),
+        ("🏥 Follow-up Advice", re.compile(r'^(?:🏥\s*)?(?:Follow-up\s*Advice|फॉलो-अप\s*सलाह|फॉलो-अप\s*सल्ला|ಫಾಲೋ-ಅಪ್\s*ಸಲಹೆ|ఫాలో-అప్\s*సలహా|தொடர்\s*ஆலோசனை)[:\s\-]*$', re.I | re.M)),
     ]
 
     matches = []
@@ -1096,7 +1245,7 @@ chat_container = st.container()
 
 with chat_container:
     # Render messages (only latest pair)
-    for message in st.session_state.messages:
+    for idx, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
             if message["role"] == "assistant":
                 clean_content = re.sub(r'^\s*📋?\s*\*\*Retrieved Patient:\*\*.*?(?:\n\n|\n)', '', message["content"], flags=re.I).strip()
@@ -1105,6 +1254,16 @@ with chat_container:
                     st.html(ans_html)
                 else:
                     st.markdown(ans_html, unsafe_allow_html=True)
+
+                # Multilingual Voice Output (Listen to Answer button)
+                msg_lang = message.get("lang", selected_language)
+                col_hl, _ = st.columns([0.45, 0.55])
+                with col_hl:
+                    if st.button(f"🔊 Listen to Answer ({msg_lang})", key=f"btn_listen_hist_{idx}"):
+                        with st.spinner(f"🔊 Generating speech in {msg_lang}..."):
+                            h_audio = text_to_speech_audio(clean_content, lang=msg_lang)
+                        if h_audio:
+                            st.audio(h_audio, format="audio/mp3", autoplay=True)
             else:
                 st.markdown(message["content"], unsafe_allow_html=True)
 
@@ -1113,10 +1272,44 @@ with chat_container:
         prompt = st.session_state.messages[-1]["content"]
 
         with st.chat_message("assistant"):
+            # 1. Smart Language Detection
+            detected_lang = detect_language(prompt)
+
+            # 2. Query Translation for RAG (reports are in English)
+            if detected_lang != "English":
+                rag_query = translate_text(prompt, target_lang="English", source_lang=detected_lang)
+            elif selected_language != "English":
+                rag_query = translate_text(prompt, target_lang="English", source_lang=selected_language)
+            else:
+                rag_query = prompt
+
+            if detected_lang != "English":
+                st.markdown(
+                    f'<div style="margin-bottom: 0.65rem;">'
+                    f'<span class="pill-badge pill-blue">🌐 Detected Language: <b>{detected_lang}</b></span> '
+                    f'<span class="status-caption" style="margin-left: 0.4rem;">(Interpreted clinical query: <i>"{rag_query}"</i>)</span>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
             # Small animated typing indicator
             with st.status("🔍 Analyzing Patient Report...", expanded=False) as status:
-                answer, retrieved_patient_ui, evidence_list = generate_answer(prompt, model_name=selected_model)
+                # UNCHANGED RAG CALL
+                answer, retrieved_patient_ui, evidence_list = generate_answer(rag_query, model_name=selected_model)
                 status.update(label="Assessment Complete ✅", state="complete")
+
+            # 3. Translation Mode
+            target_lang = "English"
+            if translate_responses:
+                target_lang = selected_language
+            elif detected_lang != "English":
+                target_lang = detected_lang
+
+            if target_lang != "English":
+                with st.spinner(f"🌐 Translating response to {target_lang}..."):
+                    display_answer = translate_text(answer, target_lang=target_lang, source_lang="English")
+            else:
+                display_answer = answer
 
             # Update Current Patient dynamically based on retrieved record
             if evidence_list and isinstance(evidence_list, dict):
@@ -1129,32 +1322,45 @@ with chat_container:
                         st.session_state.active_patient_display = ret_pname
 
             # Show Answer Section in modern redesigned cards
-            answer_cards_html = render_styled_answer_cards(answer)
+            answer_cards_html = render_styled_answer_cards(display_answer)
             if hasattr(st, "html"):
                 st.html(answer_cards_html)
             else:
                 st.markdown(answer_cards_html, unsafe_allow_html=True)
 
-            # Show Download Answer as PDF Button
-            target_pname = st.session_state.active_patient_display
-            if evidence_list and isinstance(evidence_list, dict):
-                ep = evidence_list.get("patient_name")
-                if ep and ep != "Not specified":
-                    target_pname = ep
+            # Show Action Buttons (Listen to Answer, Download PDF)
+            col_act1, col_act2 = st.columns([0.45, 0.55])
+            with col_act1:
+                listen_now_clicked = st.button(f"🔊 Listen to Answer ({target_lang})", key=f"btn_listen_current_{len(st.session_state.messages)}")
+            with col_act2:
+                target_pname = st.session_state.active_patient_display
+                if evidence_list and isinstance(evidence_list, dict):
+                    ep = evidence_list.get("patient_name")
+                    if ep and ep != "Not specified":
+                        target_pname = ep
 
-            pdf_bytes = generate_answer_pdf(
-                question=prompt,
-                answer=answer,
-                patient_name=target_pname
-            )
+                pdf_bytes = generate_answer_pdf(
+                    question=prompt,
+                    answer=display_answer,
+                    patient_name=target_pname
+                )
 
-            st.download_button(
-                label="📥 Download Answer as PDF",
-                data=pdf_bytes,
-                file_name=f"Clinical_Answer_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                mime="application/pdf",
-                use_container_width=False
-            )
+                st.download_button(
+                    label="📥 Download Answer as PDF",
+                    data=pdf_bytes,
+                    file_name=f"Clinical_Answer_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                    mime="application/pdf",
+                    use_container_width=False
+                )
+
+            # Auto-speak if Voice Assistant Mode is active, or user clicked Listen
+            is_auto_speak = st.session_state.get("auto_speak_answer", False) or voice_assistant_mode
+            if listen_now_clicked or is_auto_speak:
+                with st.spinner(f"🔊 Synthesizing voice response in {target_lang}..."):
+                    speech_audio = text_to_speech_audio(display_answer, lang=target_lang)
+                if speech_audio:
+                    st.audio(speech_audio, format="audio/mp3", autoplay=True)
+                st.session_state.auto_speak_answer = False
 
             # Show Clean Clinical Evidence Card (Zero Technical RAG Details)
             if evidence_list:
@@ -1190,8 +1396,12 @@ with chat_container:
                     else:
                         st.markdown(clinical_card_html, unsafe_allow_html=True)
 
-            # Save latest state
-            st.session_state.messages.append({"role": "assistant", "content": answer})
+            # Save latest state with language metadata
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": display_answer,
+                "lang": target_lang
+            })
 
 # ── Tiny Footer ──────────────────────────────────────────────────────────────
 st.markdown("""

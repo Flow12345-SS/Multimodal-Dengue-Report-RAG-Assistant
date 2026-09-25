@@ -11,3 +11,7 @@ pypdf
 python-docx
 pandas
 reportlab
+gTTS
+deep-translator
+SpeechRecognition
+langdetect
