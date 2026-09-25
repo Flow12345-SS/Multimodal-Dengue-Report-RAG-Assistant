@@ -228,6 +228,59 @@ st.markdown("""
         border-color: #DC2626 !important;
     }
 
+    /* ── Professional Clinical Evidence Card ── */
+    .clinical-evidence-card {
+        background-color: #FFFFFF !important;
+        border: 1px solid #BAE6FD !important;
+        border-radius: 14px !important;
+        box-shadow: 0 4px 16px -2px rgba(14, 165, 233, 0.08) !important;
+        padding: 1.25rem 1.6rem !important;
+        color: #0F172A !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+    .evidence-header-label {
+        font-size: 0.96rem !important;
+        font-weight: 700 !important;
+        color: #0369A1 !important;
+        margin-bottom: 0.35rem !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.4rem !important;
+    }
+    .evidence-patient-name {
+        font-size: 1.05rem !important;
+        font-weight: 800 !important;
+        color: #0F172A !important;
+        padding-left: 0.15rem !important;
+    }
+    .evidence-val-text {
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        color: #1E293B !important;
+        padding-left: 0.15rem !important;
+    }
+    .evidence-bullet-list {
+        list-style: none !important;
+        padding-left: 0.15rem !important;
+        margin: 0.25rem 0 0 0 !important;
+    }
+    .evidence-bullet-list li {
+        font-size: 0.92rem !important;
+        color: #334155 !important;
+        line-height: 1.65 !important;
+        position: relative !important;
+        padding-left: 1.2rem !important;
+    }
+    .evidence-bullet-list li::before {
+        content: "•" !important;
+        color: #0284C7 !important;
+        font-weight: 900 !important;
+        font-size: 1.25rem !important;
+        position: absolute !important;
+        left: 0.1rem !important;
+        top: -0.15rem !important;
+    }
+
     /* ── Selectbox Styling ── */
     div[data-testid="stSelectbox"] > div {
         border-radius: 10px !important;
@@ -630,12 +683,43 @@ with chat_container:
             answer_card_html = f'<div class="answer-card-box">{answer}</div>'
             st.markdown(answer_card_html, unsafe_allow_html=True)
 
-            # Show Evidence Expander
+            # Show Clean Clinical Evidence Card (Zero Technical RAG Metadata)
             if evidence_list:
-                with st.expander("🔍 View Retrieved Evidence / Source Chunks", expanded=False):
-                    for i, ev in enumerate(evidence_list):
-                        st.markdown(f"**Chunk #{i+1}** | *Source:* `{ev['source_file']}` | *Distance Score:* `{ev['score']}`")
-                        st.text(ev['content'])
+                if isinstance(evidence_list, dict):
+                    ev_name = evidence_list.get("patient_name", "Not specified")
+                    ev_findings = evidence_list.get("findings", [])
+                    ev_diag = evidence_list.get("diagnosis", "Suspected Dengue Fever")
+                    ev_recs = evidence_list.get("recommendations", [])
+                else:
+                    ev_name = "Not specified"
+                    ev_findings = []
+                    ev_diag = "Suspected Dengue Fever"
+                    ev_recs = []
+
+                findings_html = "".join([f"<li>{item}</li>" for item in ev_findings]) if ev_findings else "<li>No laboratory findings specified</li>"
+                recs_html = "".join([f"<li>{item}</li>" for item in ev_recs]) if ev_recs else "<li>Follow standard clinical care guidance</li>"
+
+                clinical_card_html = f"""
+<div class="clinical-evidence-card">
+    <div class="evidence-header-label">👤 Patient Name</div>
+    <div class="evidence-patient-name">{ev_name}</div>
+
+    <div class="evidence-header-label" style="margin-top: 1.1rem;">🩸 Clinical Findings</div>
+    <ul class="evidence-bullet-list">
+        {findings_html}
+    </ul>
+
+    <div class="evidence-header-label" style="margin-top: 1.1rem;">🩺 Diagnosis</div>
+    <div class="evidence-val-text">{ev_diag}</div>
+
+    <div class="evidence-header-label" style="margin-top: 1.1rem;">💊 Recommendation</div>
+    <ul class="evidence-bullet-list">
+        {recs_html}
+    </ul>
+</div>
+"""
+                with st.expander("📋 View Clinical Evidence", expanded=False):
+                    st.markdown(clinical_card_html, unsafe_allow_html=True)
 
             # Save latest state
             final_output = f"{retrieved_patient_ui}\n\n{answer}" if retrieved_patient_ui else answer

@@ -144,6 +144,16 @@ def extract_dynamic_entities_from_text(text: str) -> dict:
     if risk_m:
         entities['risk_level'] = risk_m.group(1).strip()
 
+    # WBC Count
+    wbc_m = re.search(r"(?:WBC\s*Count|WBC|Total\s*Leukocyte\s*Count|TLC)\s*[:\-]?\s*([\d,]+(?:\s*/\s*[uµ]L|\s*/\s*mm3)?)", text, re.I)
+    if wbc_m:
+        entities['wbc_count'] = wbc_m.group(1).strip()
+
+    # Hematocrit / PCV
+    hct_m = re.search(r"(?:Hematocrit|HCT|PCV)\s*[:\-]?\s*(\d+(?:\.\d+)?\s*%?)", text, re.I)
+    if hct_m:
+        entities['hematocrit'] = hct_m.group(1).strip()
+
     # Recommendations
     rec_m = re.search(r"(?:Recommendations?|Advice|Treatment\s*Plan|Plan)\s*[:\-]?\s*([^\n\r]+(?:\n[^\n\r]+){0,4})", text, re.I)
     if rec_m:
@@ -300,15 +310,46 @@ def generate_answer(question: str, model_name: str = "tinyllama"):
 
     retrieved_patient_ui = f"**Retrieved Patient:** {retrieved_name} ({retrieved_id})"
 
-    # Prepare evidence chunks list for display
-    evidence_list = []
-    for doc, score in results_with_scores:
-        evidence_list.append({
-            "source_file": doc.metadata.get("source_file", "Uploaded Document"),
-            "chunk_id": doc.metadata.get("chunk_id", 0),
-            "score": round(float(score), 4) if isinstance(score, (int, float)) else "N/A",
-            "content": doc.page_content
-        })
+    # Build clean structured clinical evidence preview
+    findings_list = []
+    if entities.get('age'):
+        findings_list.append(f"Age: {entities['age']}")
+    if entities.get('ns1'):
+        findings_list.append(f"NS1 Antigen: {entities['ns1']}")
+    if entities.get('platelet_count'):
+        findings_list.append(f"Platelet Count: {entities['platelet_count']}")
+    if entities.get('wbc_count'):
+        findings_list.append(f"WBC Count: {entities['wbc_count']}")
+    if entities.get('hematocrit'):
+        findings_list.append(f"Hematocrit: {entities['hematocrit']}")
+    if entities.get('igm'):
+        findings_list.append(f"IgM Antibody: {entities['igm']}")
+    if entities.get('igg'):
+        findings_list.append(f"IgG Antibody: {entities['igg']}")
+    if entities.get('gender'):
+        findings_list.append(f"Gender: {entities['gender']}")
+
+    raw_rec = entities.get('recommendations', '')
+    rec_items = []
+    if raw_rec:
+        for line in re.split(r'[\n\r;•\*\d+\.]+', raw_rec):
+            line_c = line.strip()
+            if line_c and len(line_c) > 3:
+                rec_items.append(line_c)
+    if not rec_items:
+        rec_items = [
+            "Monitor platelet count daily",
+            "Maintain adequate fluid intake",
+            "Follow-up testing recommended"
+        ]
+
+    clinical_evidence = {
+        "patient_name": retrieved_name,
+        "patient_id": retrieved_id,
+        "findings": findings_list,
+        "diagnosis": entities.get('diagnosis', 'Suspected Dengue Fever'),
+        "recommendations": rec_items
+    }
 
     # Check if Ollama LLM is available
     is_ollama_ok, _ = check_ollama_health(model_name)
@@ -340,11 +381,11 @@ def generate_answer(question: str, model_name: str = "tinyllama"):
             output_text = response.content.strip() if hasattr(response, 'content') else str(response).strip()
 
             if output_text and len(output_text) > 1:
-                return output_text, retrieved_patient_ui, evidence_list
+                return output_text, retrieved_patient_ui, clinical_evidence
 
         except Exception as e:
             logger.warning(f"Ollama generation failed, falling back to direct extraction: {e}")
 
     # Deterministic Grounded Fallback
     grounded_ans = direct_grounded_answer(question, context, entities)
-    return grounded_ans, retrieved_patient_ui, evidence_list
+    return grounded_ans, retrieved_patient_ui, clinical_evidence
