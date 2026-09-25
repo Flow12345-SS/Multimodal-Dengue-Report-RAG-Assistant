@@ -9,8 +9,14 @@ st.set_page_config(
     layout="wide"
 )
 
+import importlib
+import rag_pipeline
+import ingest
+importlib.reload(rag_pipeline)
+importlib.reload(ingest)
+
 from rag_pipeline import generate_answer, load_vectorstore
-from ingest import init_directories, clean_directories
+from ingest import init_directories, clean_directories, ingest_documents
 
 init_directories()
 
