@@ -134,21 +134,40 @@ def is_general_medical_query(query: str) -> bool:
             return True
     return False
 
+REPORT_STANDARD_ATTRIBUTES = [
+    'platelet', 'platelets', 'platelet count',
+    'diagnosis', 'diagnose', 'condition',
+    'risk', 'risk level', 'risk assessment',
+    'ns1', 'antigen', 'ns1 antigen',
+    'igm', 'igg', 'antibody', 'antibodies',
+    'age', 'gender', 'sex', 'patient name', 'name',
+    'patient id', 'pid', 'id', 'report', 'results', 'findings'
+]
+
 def check_missing_patient_attribute(query: str, context: str) -> str:
     q = query.lower()
     ctx = context.lower()
+
+    # If the query asks for standard clinical attributes that reports normally provide,
+    # it is NOT a missing attribute query
+    for attr in REPORT_STANDARD_ATTRIBUTES:
+        if re.search(r'\b' + re.escape(attr) + r'\b', q):
+            return None
+
+    # Check known missing attribute keywords (e.g. blood group, blood pressure, etc.)
     for attr_name, triggers in MISSING_ATTRIBUTE_KEYWORDS:
         for trig in triggers:
             if re.search(r'\b' + re.escape(trig) + r'\b', q):
                 if not re.search(r'\b' + re.escape(trig) + r'\b', ctx):
                     return attr_name
 
-    # Generic regex fallback for possessive queries
-    m = re.search(r"(?:'s|s)\s+([a-zA-Z\s]+?)(?:\?|$)", q)
-    if m:
-        candidate = m.group(1).strip()
+    # Generic check for explicit possessive queries: e.g. "What is Rahul's insurance?"
+    # Must explicitly match a word followed by 's or s', not common helper verbs like 'is', 'was', 'this'
+    m = re.search(r"\b([A-Za-z]+)(?:'s|s')\s+([a-zA-Z\s]+?)(?:\?|$)", query)
+    if m and m.group(1).lower() not in ['what', 'that', 'this', 'there', 'it', 'who', 'how', 'is', 'was']:
+        candidate = m.group(2).strip().lower()
         candidate = re.sub(r'^(the|a|an)\s+', '', candidate)
-        if candidate and candidate not in ['name', 'id', 'age', 'gender', 'platelet', 'platelets', 'diagnosis', 'risk', 'report', 'results']:
+        if candidate and not any(re.search(r'\b' + re.escape(ra) + r'\b', candidate) for ra in REPORT_STANDARD_ATTRIBUTES):
             if candidate not in ctx:
                 return candidate
     return None
@@ -566,15 +585,7 @@ def generate_answer(question: str, model_name: str = "tinyllama"):
             return f"No clinical records found for patient '{target_name}' in the uploaded reports.", ""
 
     # -----------------------------------------------------------------------
-    # Step 3: Check for Missing Specific Patient Attribute (Requirement 3)
-    # -----------------------------------------------------------------------
-    missing_attr = check_missing_patient_attribute(question, context)
-    if missing_attr:
-        disp_name = target_name or retrieved_name
-        return f"The uploaded report does not contain information about {disp_name}'s {missing_attr}.", retrieved_patient_ui
-
-    # -----------------------------------------------------------------------
-    # Step 4: Intent Detection for Direct Structured Values
+    # Step 3: Intent Detection for Direct Structured Values
     # -----------------------------------------------------------------------
     intent = detect_query_intent(question, target_name)
     print(f"[DEBUG] Detected Intent: {intent}")
@@ -598,6 +609,14 @@ def generate_answer(question: str, model_name: str = "tinyllama"):
 
     if intent == 'gender':
         return str(patient_data.get('gender', 'Unknown')), retrieved_patient_ui
+
+    # -----------------------------------------------------------------------
+    # Step 4: Check for Missing Specific Patient Attribute (Requirement 3)
+    # -----------------------------------------------------------------------
+    missing_attr = check_missing_patient_attribute(question, context)
+    if missing_attr:
+        disp_name = target_name or retrieved_name
+        return f"The uploaded report does not contain information about {disp_name}'s {missing_attr}.", retrieved_patient_ui
 
     # -----------------------------------------------------------------------
     # Step 5: Clinical Assessment Queries (Grounded Synthesis)
