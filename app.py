@@ -215,19 +215,21 @@ st.markdown("""
         padding-right: 1.5rem !important;
     }
 
-    /* ── Header Banner (Rich Healthcare Blue Gradient) ── */
+    /* ── Header Banner (Modern Healthcare Blue + Teal Gradient) ── */
     .sky-header-banner {
-        background: linear-gradient(135deg, #1E40AF 0%, #2563EB 35%, #0EA5E9 70%, #38BDF8 100%) !important;
+        background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 52%, #14B8A6 100%) !important;
         border-radius: 20px !important;
-        padding: 1.65rem 2.2rem !important;
+        padding: 1.85rem 2.4rem !important;
         color: #FFFFFF !important;
-        box-shadow: 0 10px 28px -4px rgba(37, 99, 235, 0.28), 0 4px 12px -2px rgba(14, 165, 233, 0.18) !important;
-        margin-bottom: 1.25rem !important;
+        box-shadow: 0 12px 34px -4px rgba(37, 99, 235, 0.28), 0 4px 16px -2px rgba(20, 184, 166, 0.22) !important;
+        margin-bottom: 1.35rem !important;
         text-align: center !important;
         border: 1px solid rgba(255, 255, 255, 0.35) !important;
+        position: relative !important;
+        overflow: hidden !important;
     }
     .header-title-text {
-        font-size: 2rem !important;
+        font-size: 2.1rem !important;
         font-weight: 800 !important;
         color: #FFFFFF !important;
         margin: 0 !important;
@@ -235,18 +237,19 @@ st.markdown("""
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 0.6rem !important;
+        gap: 0.65rem !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.12) !important;
     }
     .header-subtitle-text {
-        font-size: 0.98rem !important;
+        font-size: 1rem !important;
         color: #E0F2FE !important;
-        margin: 0.35rem 0 0 0 !important;
+        margin: 0.4rem 0 0 0 !important;
         font-weight: 600 !important;
-        opacity: 0.95 !important;
-        letter-spacing: 0.01em !important;
+        opacity: 0.98 !important;
+        letter-spacing: 0.015em !important;
     }
 
-    /* ── Top Modern Cards (Equal Height, Rounded 18px-20px, Soft Shadows) ── */
+    /* ── Glass-Effect Modern Cards (Equal Height, Rounded 18px, Soft Shadows) ── */
     div[data-testid="stHorizontalBlock"] {
         align-items: stretch !important;
     }
@@ -254,12 +257,16 @@ st.markdown("""
         display: flex !important;
         flex-direction: column !important;
     }
-    div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] > div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #FFFFFF !important;
+    div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] > div[data-testid="stVerticalBlockBorderWrapper"],
+    .voice-control-panel,
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > .clinical-evidence-card) {
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(14px) !important;
+        -webkit-backdrop-filter: blur(14px) !important;
         border-radius: 18px !important;
-        border: 1.5px solid #BAE6FD !important;
-        box-shadow: 0 4px 18px -2px rgba(14, 165, 233, 0.08) !important;
-        padding: 0.85rem 1rem !important;
+        border: 1.5px solid rgba(186, 230, 253, 0.8) !important;
+        box-shadow: 0 4px 20px -2px rgba(14, 165, 233, 0.08), 0 2px 8px -1px rgba(15, 23, 42, 0.04) !important;
+        padding: 0.95rem 1.15rem !important;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
         display: flex !important;
         flex-direction: column !important;
@@ -268,10 +275,11 @@ st.markdown("""
         min-height: 205px !important;
         box-sizing: border-box !important;
     }
-    div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] > div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        box-shadow: 0 8px 26px -2px rgba(14, 165, 233, 0.16) !important;
-        transform: translateY(-3px) !important;
-        border-color: #38BDF8 !important;
+    div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] > div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+    .voice-control-panel:hover {
+        box-shadow: 0 10px 30px -4px rgba(14, 165, 233, 0.22), 0 0 16px rgba(20, 184, 166, 0.18) !important;
+        transform: translateY(-2px) !important;
+        border-color: #0EA5E9 !important;
     }
     div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] > div[data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlock"] {
         display: flex !important;
@@ -292,38 +300,45 @@ st.markdown("""
         gap: 0.4rem;
     }
 
-    /* ── Pill-Style Status Badges (Clean, Modern Healthcare) ── */
+    /* ── Status Pill Badges (Modern Enterprise Healthcare) ── */
     .pill-badge {
         display: inline-flex;
         align-items: center;
-        gap: 0.4rem;
+        gap: 0.45rem;
         font-size: 0.84rem;
         font-weight: 700;
-        padding: 0.38rem 0.85rem;
+        padding: 0.4rem 0.9rem;
         border-radius: 9999px;
         white-space: nowrap;
         margin-top: 0.35rem;
         transition: all 0.2s ease-in-out;
+        backdrop-filter: blur(8px);
     }
     .pill-green {
-        background-color: #ECFDF5 !important;
-        color: #15803D !important;
-        border: 1.5px solid #86EFAC !important;
-        box-shadow: 0 2px 8px rgba(74, 222, 128, 0.18) !important;
+        background-color: rgba(236, 253, 245, 0.95) !important;
+        color: #059669 !important;
+        border: 1.5px solid #6EE7B7 !important;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15) !important;
+    }
+    .pill-teal {
+        background-color: rgba(240, 253, 250, 0.95) !important;
+        color: #0D9488 !important;
+        border: 1.5px solid #5EEAD4 !important;
+        box-shadow: 0 2px 8px rgba(20, 184, 166, 0.16) !important;
     }
     .pill-model, .pill-blue {
-        background-color: #F0F9FF !important;
-        color: #0369A1 !important;
+        background-color: rgba(240, 249, 255, 0.95) !important;
+        color: #0284C7 !important;
         border: 1.5px solid #BAE6FD !important;
-        box-shadow: 0 2px 8px rgba(56, 189, 248, 0.15) !important;
+        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.14) !important;
     }
     .pill-yellow {
-        background-color: #FEF3C7 !important;
+        background-color: rgba(254, 243, 199, 0.95) !important;
         color: #92400E !important;
         border: 1.5px solid #FDE68A !important;
     }
     .pill-red {
-        background-color: #FEE2E2 !important;
+        background-color: rgba(254, 226, 226, 0.95) !important;
         color: #991B1B !important;
         border: 1.5px solid #FECACA !important;
     }
@@ -341,26 +356,28 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* ── Current Patient Badge (Highlighted Pill) ── */
+    /* ── Premium Patient Badge (Healthcare Blue + Teal Pill) ── */
     .patient-pill-badge {
         display: inline-flex;
         align-items: center;
-        gap: 0.45rem;
-        background: #FFFFFF;
-        border: 1.5px solid #38BDF8;
+        gap: 0.55rem;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 253, 250, 0.95) 100%);
+        border: 1.5px solid #14B8A6;
         border-radius: 9999px;
-        padding: 0.45rem 1.15rem;
-        font-size: 0.88rem;
+        padding: 0.5rem 1.35rem;
+        font-size: 0.9rem;
         font-weight: 700;
-        color: #0284C7;
-        box-shadow: 0 4px 14px rgba(14, 165, 233, 0.1);
-        margin-bottom: 0.75rem;
+        color: #0F766E;
+        box-shadow: 0 4px 18px rgba(20, 184, 166, 0.16), 0 1px 3px rgba(0, 0, 0, 0.04);
+        margin-bottom: 0.85rem;
+        backdrop-filter: blur(10px);
         transition: all 0.25s ease;
     }
     .patient-pill-badge:hover {
         border-color: #0EA5E9;
-        transform: translateY(-1px);
-        box-shadow: 0 6px 18px rgba(14, 165, 233, 0.18);
+        color: #0369A1;
+        transform: translateY(-1.5px);
+        box-shadow: 0 6px 22px rgba(14, 165, 233, 0.22);
     }
 
     /* ── Grounded Response Badge ── */
@@ -499,22 +516,22 @@ st.markdown("""
         font-weight: 600 !important;
     }
 
-    /* Process Documents Button */
+    /* Modern Primary Buttons (Healthcare Blue + Teal Gradient) */
     .stButton > button {
-        background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 60%, #38BDF8 100%) !important;
+        background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 55%, #14B8A6 100%) !important;
         color: #FFFFFF !important;
         border: none !important;
         border-radius: 14px !important;
         font-weight: 700 !important;
         font-size: 0.9rem !important;
         padding: 0.55rem 1.3rem !important;
-        box-shadow: 0 4px 16px rgba(37, 99, 235, 0.25) !important;
+        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.25) !important;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
         margin-top: 0.35rem !important;
     }
     .stButton > button:hover {
-        background: linear-gradient(135deg, #1D4ED8 0%, #0284C7 60%, #0EA5E9 100%) !important;
-        box-shadow: 0 8px 24px rgba(37, 99, 235, 0.38) !important;
+        background: linear-gradient(135deg, #1D4ED8 0%, #0284C7 55%, #0D9488 100%) !important;
+        box-shadow: 0 8px 24px rgba(14, 165, 233, 0.38) !important;
         transform: translateY(-2px) !important;
         color: #FFFFFF !important;
     }
@@ -963,11 +980,11 @@ with col3:
     with st.container(border=True):
         st.markdown('<div class="col-header">🗄️ Index Status</div>', unsafe_allow_html=True)
         if load_vectorstore() is not None:
-            st.markdown('<span class="pill-badge pill-green">FAISS Ready ✅</span>', unsafe_allow_html=True)
-            st.markdown('<div class="status-caption">Active report index ready</div>', unsafe_allow_html=True)
+            st.markdown('<span class="pill-badge pill-green">✅ FAISS Ready</span>', unsafe_allow_html=True)
         else:
-            st.markdown('<span class="pill-badge pill-red">FAISS Not Loaded ⏳</span>', unsafe_allow_html=True)
-            st.markdown('<div class="status-caption">Upload & process report</div>', unsafe_allow_html=True)
+            st.markdown('<span class="pill-badge pill-red">⏳ FAISS Not Loaded</span>', unsafe_allow_html=True)
+        st.markdown('<span class="pill-badge pill-teal">✅ Bedrock Connected</span>', unsafe_allow_html=True)
+        st.markdown('<div class="status-caption">Knowledge Base synced</div>', unsafe_allow_html=True)
 
 # Column 4: Ollama Status
 with col4:
@@ -985,13 +1002,13 @@ with col4:
 
         if ollama_running:
             if any(m.startswith(selected_model) for m in available_models):
-                st.markdown('<span class="pill-badge pill-green">Ollama Running ✅</span>', unsafe_allow_html=True)
+                st.markdown('<span class="pill-badge pill-green">✅ Ollama Running</span>', unsafe_allow_html=True)
                 st.markdown(f'<div class="status-caption">{selected_model} ready</div>', unsafe_allow_html=True)
             else:
-                st.markdown(f'<span class="pill-badge pill-yellow">Ollama Running (Model Missing) ⚠️</span>', unsafe_allow_html=True)
+                st.markdown(f'<span class="pill-badge pill-yellow">⚠️ Ollama (Model Missing)</span>', unsafe_allow_html=True)
                 st.markdown(f'<div class="status-caption">Run: ollama pull {selected_model}</div>', unsafe_allow_html=True)
         else:
-            st.markdown('<span class="pill-badge pill-red">Ollama Offline ❌</span>', unsafe_allow_html=True)
+            st.markdown('<span class="pill-badge pill-red">❌ Ollama Offline</span>', unsafe_allow_html=True)
             st.markdown('<div class="status-caption">Run: ollama serve</div>', unsafe_allow_html=True)
 
 # Divider
@@ -1406,6 +1423,6 @@ with chat_container:
 # ── Tiny Footer ──────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="app-footer">
-    Powered by AWS Bedrock Knowledge Base + RAG
+    Powered by: Amazon S3 • Bedrock Knowledge Base • RAG
 </div>
 """, unsafe_allow_html=True)
