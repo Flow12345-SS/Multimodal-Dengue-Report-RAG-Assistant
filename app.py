@@ -934,26 +934,6 @@ with col4:
 # Divider
 st.markdown("---")
 
-# ── Dynamic Current Patient Badge ────────────────────────────────────────────
-active_meta = get_active_report_meta()
-if "active_patient_display" not in st.session_state or not st.session_state.active_patient_display:
-    cur_p_name = active_meta.get("patient_name")
-    cur_p_id = active_meta.get("patient_id")
-    if not cur_p_name or cur_p_name in ["Not specified", "Extracted", "Unknown"]:
-        cur_p_name = "Rahul"
-    if not cur_p_id or cur_p_id in ["Not specified", "Extracted", "Unknown"]:
-        cur_p_id = "D001"
-    st.session_state.active_patient_display = f"{cur_p_name} ({cur_p_id})"
-
-col_badge_left, col_badge_right = st.columns([0.65, 0.35])
-with col_badge_left:
-    st.markdown(
-        f'<div style="margin-bottom: 0.5rem;">'
-        f'<span class="patient-pill-badge">👤 Current Patient: <strong>{st.session_state.active_patient_display}</strong></span>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
-
 # ── Document Ingestion Processing ────────────────────────────────────────────
 if process_clicked:
     if uploaded_files:
@@ -961,6 +941,7 @@ if process_clicked:
             st.cache_resource.clear()
             clean_directories()
             st.session_state.messages = []
+            st.session_state.active_patient_display = None
 
             for uploaded_file in uploaded_files:
                 dest_path = os.path.join("reports", uploaded_file.name)
@@ -973,15 +954,41 @@ if process_clicked:
             if success:
                 st.cache_resource.clear()
                 p_name = meta_info.get("patient_name", "Extracted")
-                p_id = meta_info.get("patient_id", "Extracted")
-                st.session_state.active_patient_display = f"{p_name} ({p_id})"
-                st.toast(f"✅ Ingested: {p_name} ({p_id})", icon="🟢")
-                st.success(f"✅ Report processed successfully! Active: **{p_name}** ({p_id}) | Chunks: {meta_info.get('chunk_count', 0)}")
+                p_id = meta_info.get("patient_id", "Not specified")
+                if p_id and p_id not in ["Not specified", "Extracted", "Unknown"]:
+                    st.session_state.active_patient_display = f"{p_name} ({p_id})"
+                else:
+                    st.session_state.active_patient_display = p_name
+                st.toast(f"✅ Ingested: {st.session_state.active_patient_display}", icon="🟢")
+                st.success(f"✅ Report processed successfully! Active: **{st.session_state.active_patient_display}** | Chunks: {meta_info.get('chunk_count', 0)}")
                 st.rerun()
             else:
                 st.error("Failed to ingest documents.")
     else:
         st.warning("Please upload a medical report (PDF, TXT, DOCX) first.")
+
+# ── Dynamic Current Patient Badge (Strictly shown AFTER processing report) ───
+is_report_ready = load_vectorstore() is not None
+
+# Sync patient name from active report metadata if vectorstore is loaded but state is empty
+if is_report_ready and not st.session_state.get("active_patient_display"):
+    active_meta = get_active_report_meta()
+    cur_p_name = active_meta.get("patient_name")
+    cur_p_id = active_meta.get("patient_id")
+    if cur_p_name and cur_p_name not in ["Not specified", "Extracted", "Unknown"]:
+        if cur_p_id and cur_p_id not in ["Not specified", "Extracted", "Unknown"]:
+            st.session_state.active_patient_display = f"{cur_p_name} ({cur_p_id})"
+        else:
+            st.session_state.active_patient_display = cur_p_name
+
+# Display Current Patient badge strictly after processing
+if is_report_ready and st.session_state.get("active_patient_display"):
+    st.markdown(
+        f'<div style="margin-bottom: 0.65rem;">'
+        f'<span class="patient-pill-badge">👤 Current Patient: <strong>{st.session_state.active_patient_display}</strong></span>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
 # ── Session State Management (Latest Q&A Only & Recent Questions) ───────────
 if "messages" not in st.session_state:
@@ -994,28 +1001,29 @@ if "recent_questions" not in st.session_state:
         "What is the risk level?"
     ]
 
-# ── Suggested Questions Section (Clickable Pills) ───────────────────────────
-st.markdown("""
-<div class="suggested-q-title">💡 Suggested Questions</div>
-""", unsafe_allow_html=True)
+# ── Suggested Questions Section (Clickable Pills - Shown After Processing Report) ─
+if is_report_ready and st.session_state.get("active_patient_display"):
+    st.markdown("""
+    <div class="suggested-q-title">💡 Suggested Questions</div>
+    """, unsafe_allow_html=True)
 
-suggested_queries = [
-    "What is the diagnosis?",
-    "What is the platelet count?",
-    "What is the risk level?",
-    "Summarize the report.",
-    "What recommendations are provided?"
-]
+    suggested_queries = [
+        "What is the diagnosis?",
+        "What is the platelet count?",
+        "What is the risk level?",
+        "Summarize the report.",
+        "What recommendations are provided?"
+    ]
 
-sq_cols = st.columns(5)
-for col, sq_text in zip(sq_cols, suggested_queries):
-    with col:
-        if st.button(sq_text, key=f"sq_btn_{sq_text}", use_container_width=True):
-            if sq_text not in st.session_state.recent_questions:
-                st.session_state.recent_questions.insert(0, sq_text)
-                st.session_state.recent_questions = st.session_state.recent_questions[:5]
-            st.session_state.messages = [{"role": "user", "content": sq_text}]
-            st.rerun()
+    sq_cols = st.columns(5)
+    for col, sq_text in zip(sq_cols, suggested_queries):
+        with col:
+            if st.button(sq_text, key=f"sq_btn_{sq_text}", use_container_width=True):
+                if sq_text not in st.session_state.recent_questions:
+                    st.session_state.recent_questions.insert(0, sq_text)
+                    st.session_state.recent_questions = st.session_state.recent_questions[:5]
+                st.session_state.messages = [{"role": "user", "content": sq_text}]
+                st.rerun()
 
 # ── Recent Questions (Last 5 Questions Stored) ──────────────────────────────
 if st.session_state.recent_questions:
@@ -1122,8 +1130,11 @@ with chat_container:
             if evidence_list and isinstance(evidence_list, dict):
                 ret_pname = evidence_list.get("patient_name")
                 ret_pid = evidence_list.get("patient_id")
-                if ret_pname and ret_pname != "Not specified":
-                    st.session_state.active_patient_display = f"{ret_pname} ({ret_pid or 'ID Unknown'})"
+                if ret_pname and ret_pname not in ["Not specified", "Unknown"]:
+                    if ret_pid and ret_pid not in ["Not specified", "Extracted", "Unknown"]:
+                        st.session_state.active_patient_display = f"{ret_pname} ({ret_pid})"
+                    else:
+                        st.session_state.active_patient_display = ret_pname
 
             # Show Answer Section in modern redesigned cards
             answer_cards_html = render_styled_answer_cards(answer)
