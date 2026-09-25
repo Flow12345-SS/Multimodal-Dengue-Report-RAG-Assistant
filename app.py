@@ -179,6 +179,54 @@ st.markdown("""
         margin-top: 0.35rem;
         font-weight: 500;
     }
+    /* ── Uploaded File Card & Remove 'X' Button ── */
+    .file-card-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #F0F9FF;
+        border: 1px solid #BAE6FD;
+        border-radius: 10px;
+        padding: 0.35rem 0.6rem;
+        margin-top: 0.35rem;
+        margin-bottom: 0.45rem;
+    }
+    .file-card-name {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #0369A1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .file-card-size {
+        font-size: 0.72rem;
+        color: #64748B;
+        font-weight: 500;
+    }
+    div[data-testid="stColumn"] div:has(> button[key*="remove_"]) button,
+    button[key*="remove_"] {
+        background-color: #FEE2E2 !important;
+        color: #DC2626 !important;
+        border: 1px solid #FECACA !important;
+        border-radius: 8px !important;
+        padding: 0.1rem 0.4rem !important;
+        font-size: 0.85rem !important;
+        font-weight: 800 !important;
+        min-height: 28px !important;
+        height: 28px !important;
+        line-height: 1 !important;
+        transition: all 0.15s ease !important;
+    }
+    div[data-testid="stColumn"] div:has(> button[key*="remove_"]) button:hover,
+    button[key*="remove_"]:hover {
+        background-color: #EF4444 !important;
+        color: #FFFFFF !important;
+        border-color: #DC2626 !important;
+    }
 
     /* ── Selectbox Styling ── */
     div[data-testid="stSelectbox"] > div {
@@ -426,12 +474,58 @@ with col1:
 with col2:
     with st.container(border=True):
         st.markdown('<div class="col-header">📄 Document Upload</div>', unsafe_allow_html=True)
+        if "uploader_key" not in st.session_state:
+            st.session_state.uploader_key = 0
+
         uploaded_files = st.file_uploader(
             "Upload Medical Reports (PDF, TXT, DOCX)",
             type=["pdf", "txt", "docx"],
             accept_multiple_files=True,
-            label_visibility="collapsed"
+            label_visibility="collapsed",
+            key=f"uploader_{st.session_state.uploader_key}"
         )
+
+        # Show visible file card with 'X' (remove) button next to each uploaded report
+        if uploaded_files:
+            for idx, file in enumerate(uploaded_files):
+                size_kb = len(file.getvalue()) / 1024
+                size_str = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb/1024:.1f} MB"
+                col_finfo, col_fdel = st.columns([0.80, 0.20])
+                with col_finfo:
+                    st.markdown(
+                        f'<div class="pill-badge pill-file" style="width:100%; overflow:hidden; text-overflow:ellipsis;" title="{file.name}">'
+                        f'📄 <b>{file.name}</b> <span style="opacity:0.75;">({size_str})</span></div>',
+                        unsafe_allow_html=True
+                    )
+                with col_fdel:
+                    if st.button("✕", key=f"remove_uploaded_{idx}_{file.name[:8]}", help=f"Remove {file.name}", use_container_width=True):
+                        st.session_state.uploader_key += 1
+                        clean_directories()
+                        st.cache_resource.clear()
+                        st.session_state.messages = []
+                        st.rerun()
+        else:
+            # If files were previously ingested and reside in reports/
+            active_files = [f for f in os.listdir("reports") if os.path.isfile(os.path.join("reports", f)) and not f.endswith(".json")] if os.path.exists("reports") else []
+            if active_files:
+                for idx, fname in enumerate(active_files):
+                    fpath = os.path.join("reports", fname)
+                    fsize = os.path.getsize(fpath) / 1024
+                    size_str = f"{fsize:.1f} KB" if fsize < 1024 else f"{fsize/1024:.1f} MB"
+                    col_finfo, col_fdel = st.columns([0.80, 0.20])
+                    with col_finfo:
+                        st.markdown(
+                            f'<div class="pill-badge pill-file" style="width:100%; overflow:hidden; text-overflow:ellipsis;" title="{fname}">'
+                            f'📄 <b>{fname}</b> <span style="opacity:0.75;">({size_str})</span></div>',
+                            unsafe_allow_html=True
+                        )
+                    with col_fdel:
+                        if st.button("✕", key=f"remove_active_{idx}_{fname[:8]}", help=f"Remove {fname}", use_container_width=True):
+                            clean_directories()
+                            st.cache_resource.clear()
+                            st.session_state.messages = []
+                            st.rerun()
+
         process_clicked = st.button("🚀 Process Documents", use_container_width=True)
 
 # Column 3: Index Status
