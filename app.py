@@ -891,6 +891,7 @@ with col2:
                             st.cache_resource.clear()
                             st.session_state.messages = []
                             st.session_state.active_patient_display = None
+                            st.session_state.report_processed = False
                             st.rerun()
 
         process_clicked = st.button("🚀 Process Documents", use_container_width=True)
@@ -935,6 +936,9 @@ with col4:
 st.markdown("---")
 
 # ── Document Ingestion Processing ────────────────────────────────────────────
+if "report_processed" not in st.session_state:
+    st.session_state.report_processed = False
+
 if process_clicked:
     if uploaded_files:
         with st.spinner("Clearing previous session and ingesting new report..."):
@@ -942,6 +946,7 @@ if process_clicked:
             clean_directories()
             st.session_state.messages = []
             st.session_state.active_patient_display = None
+            st.session_state.report_processed = False
 
             for uploaded_file in uploaded_files:
                 dest_path = os.path.join("reports", uploaded_file.name)
@@ -959,6 +964,7 @@ if process_clicked:
                     st.session_state.active_patient_display = f"{p_name} ({p_id})"
                 else:
                     st.session_state.active_patient_display = p_name
+                st.session_state.report_processed = True
                 st.toast(f"✅ Ingested: {st.session_state.active_patient_display}", icon="🟢")
                 st.success(f"✅ Report processed successfully! Active: **{st.session_state.active_patient_display}** | Chunks: {meta_info.get('chunk_count', 0)}")
                 st.rerun()
@@ -968,21 +974,7 @@ if process_clicked:
         st.warning("Please upload a medical report (PDF, TXT, DOCX) first.")
 
 # ── Dynamic Current Patient Badge (Strictly shown AFTER processing report) ───
-is_report_ready = load_vectorstore() is not None
-
-# Sync patient name from active report metadata if vectorstore is loaded but state is empty
-if is_report_ready and not st.session_state.get("active_patient_display"):
-    active_meta = get_active_report_meta()
-    cur_p_name = active_meta.get("patient_name")
-    cur_p_id = active_meta.get("patient_id")
-    if cur_p_name and cur_p_name not in ["Not specified", "Extracted", "Unknown"]:
-        if cur_p_id and cur_p_id not in ["Not specified", "Extracted", "Unknown"]:
-            st.session_state.active_patient_display = f"{cur_p_name} ({cur_p_id})"
-        else:
-            st.session_state.active_patient_display = cur_p_name
-
-# Display Current Patient badge strictly after processing
-if is_report_ready and st.session_state.get("active_patient_display"):
+if st.session_state.get("report_processed") and st.session_state.get("active_patient_display"):
     st.markdown(
         f'<div style="margin-bottom: 0.65rem;">'
         f'<span class="patient-pill-badge">👤 Current Patient: <strong>{st.session_state.active_patient_display}</strong></span>'
@@ -1002,7 +994,7 @@ if "recent_questions" not in st.session_state:
     ]
 
 # ── Suggested Questions Section (Clickable Pills - Shown After Processing Report) ─
-if is_report_ready and st.session_state.get("active_patient_display"):
+if st.session_state.get("report_processed") and st.session_state.get("active_patient_display"):
     st.markdown("""
     <div class="suggested-q-title">💡 Suggested Questions</div>
     """, unsafe_allow_html=True)
