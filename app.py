@@ -420,37 +420,40 @@ st.markdown("""
         box-shadow: 0 4px 14px rgba(14, 165, 233, 0.06) !important;
     }
     .suggested-q-title {
-        font-size: 0.92rem !important;
+        font-size: 0.95rem !important;
         font-weight: 700 !important;
         color: #0369A1 !important;
+        margin-top: 0.75rem !important;
         margin-bottom: 0.55rem !important;
         display: flex !important;
         align-items: center !important;
-        gap: 0.4rem !important;
+        gap: 0.45rem !important;
     }
     div[data-testid="stColumn"] div:has(> button[key*="sq_btn_"]) button,
     button[key*="sq_btn_"] {
-        background-color: #F0F9FF !important;
+        background: linear-gradient(135deg, rgba(240, 249, 255, 0.95) 0%, rgba(224, 242, 254, 0.85) 100%) !important;
         border: 1.5px solid #BAE6FD !important;
         color: #0284C7 !important;
-        border-radius: 14px !important;
-        font-weight: 600 !important;
-        font-size: 0.82rem !important;
-        padding: 0.45rem 0.65rem !important;
-        box-shadow: 0 2px 6px rgba(14, 165, 233, 0.06) !important;
-        transition: all 0.2s ease !important;
+        border-radius: 9999px !important;
+        font-weight: 700 !important;
+        font-size: 0.85rem !important;
+        padding: 0.42rem 0.85rem !important;
+        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.08) !important;
+        transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        width: 100% !important;
         min-height: 38px !important;
-        height: 100% !important;
-        white-space: normal !important;
-        line-height: 1.3 !important;
+        height: 38px !important;
     }
     div[data-testid="stColumn"] div:has(> button[key*="sq_btn_"]) button:hover,
     button[key*="sq_btn_"]:hover {
-        background-color: #E0F2FE !important;
+        background: linear-gradient(135deg, #0EA5E9 0%, #14B8A6 100%) !important;
         border-color: #0EA5E9 !important;
-        color: #0369A1 !important;
+        color: #FFFFFF !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.16) !important;
+        box-shadow: 0 6px 18px rgba(14, 165, 233, 0.28) !important;
     }
 
     /* ── Recent Questions ── */
@@ -1016,7 +1019,19 @@ st.markdown("---")
 
 # ── Document Ingestion Processing ────────────────────────────────────────────
 if "report_processed" not in st.session_state:
-    st.session_state.report_processed = False
+    if load_vectorstore() is not None:
+        st.session_state.report_processed = True
+        if not st.session_state.get("active_patient_display"):
+            meta = get_active_report_meta()
+            p_name = meta.get("patient_name")
+            p_id = meta.get("patient_id")
+            if p_name and p_name not in ["Not specified", "Unknown"]:
+                if p_id and p_id not in ["Not specified", "Extracted", "Unknown"]:
+                    st.session_state.active_patient_display = f"{p_name} ({p_id})"
+                else:
+                    st.session_state.active_patient_display = p_name
+    else:
+        st.session_state.report_processed = False
 
 if process_clicked:
     if uploaded_files:
@@ -1159,28 +1174,104 @@ with st.container(border=True):
                     del st.session_state.pending_voice_query
                     st.rerun()
 
+# ── Smart Suggestions Dynamic Generator ─────────────────────────────────────
+def get_smart_suggestions() -> list:
+    """
+    Returns dynamic suggested questions based on the active report content.
+    Returns list of tuples: (compact_pill_label, full_question)
+    """
+    base_suggestions = [
+        ("Diagnosis", "What is the diagnosis?"),
+        ("Platelets", "What is the platelet count?"),
+        ("Risk", "What is the risk level?"),
+        ("Recommendations", "What recommendations are provided?"),
+        ("Summary", "Summarize the report.")
+    ]
+
+    active_files = [f for f in os.listdir("reports") if os.path.isfile(os.path.join("reports", f)) and not f.endswith(".json")] if os.path.exists("reports") else []
+    if not active_files:
+        return base_suggestions
+
+    combined_text = ""
+    for af in active_files:
+        p = os.path.join("reports", af)
+        try:
+            from ingest import extract_text_from_file
+            combined_text += " " + extract_text_from_file(p)
+        except Exception:
+            pass
+
+    if not combined_text:
+        return base_suggestions
+
+    text_lower = combined_text.lower()
+    from rag_pipeline import extract_dynamic_entities_from_text
+    entities = extract_dynamic_entities_from_text(combined_text)
+
+    smart = []
+
+    # 1. Diagnosis
+    has_diag = bool(entities.get("diagnosis")) or ("diagnos" in text_lower)
+    if has_diag:
+        smart.append(("Diagnosis", "What is the diagnosis?"))
+        smart.append(("Risk Factors", "Why is the patient at risk?"))
+    else:
+        smart.append(("Diagnosis", "What is the diagnosis?"))
+
+    # 2. Platelet Count
+    has_platelets = bool(entities.get("platelet_count")) or ("platelet" in text_lower) or ("thrombocyt" in text_lower)
+    if has_platelets:
+        smart.append(("Platelets", "What is the platelet count?"))
+        smart.append(("Platelet Normalcy", "Is the platelet count normal?"))
+    else:
+        smart.append(("Platelets", "What is the platelet count?"))
+
+    # 3. Risk Level
+    has_risk = bool(entities.get("risk_level")) or ("risk" in text_lower) or ("severe" in text_lower) or ("warning" in text_lower)
+    if has_risk:
+        smart.append(("Risk", "What is the risk level?"))
+        smart.append(("Precautions", "What precautions should the patient take?"))
+    else:
+        smart.append(("Risk", "What is the risk level?"))
+
+    # 4. Recommendations
+    has_recs = bool(entities.get("recommendations")) or ("recommend" in text_lower) or ("advise" in text_lower) or ("treatment" in text_lower)
+    if has_recs:
+        smart.append(("Recommendations", "What recommendations are provided?"))
+    else:
+        smart.append(("Recommendations", "What recommendations are provided?"))
+
+    # 5. Summary
+    smart.append(("Summary", "Summarize the report."))
+
+    # Deduplicate while preserving order, take top 5
+    seen_q = set()
+    result = []
+    for label, q in smart:
+        if q not in seen_q:
+            seen_q.add(q)
+            result.append((label, q))
+            if len(result) == 5:
+                break
+
+    return result if len(result) >= 4 else base_suggestions
+
 # ── Suggested Questions Section (Clickable Pills - Shown After Processing Report) ─
-if st.session_state.get("report_processed") and st.session_state.get("active_patient_display"):
+if st.session_state.get("report_processed") or (load_vectorstore() is not None):
     st.markdown("""
     <div class="suggested-q-title">💡 Suggested Questions</div>
     """, unsafe_allow_html=True)
 
-    suggested_queries = [
-        "What is the diagnosis?",
-        "What is the platelet count?",
-        "What is the risk level?",
-        "Summarize the report.",
-        "What recommendations are provided?"
-    ]
+    smart_queries = get_smart_suggestions()
 
-    sq_cols = st.columns(5)
-    for col, sq_text in zip(sq_cols, suggested_queries):
+    sq_cols = st.columns(len(smart_queries))
+    for col, (pill_label, full_q) in zip(sq_cols, smart_queries):
         with col:
-            if st.button(sq_text, key=f"sq_btn_{sq_text}", use_container_width=True):
-                if sq_text not in st.session_state.recent_questions:
-                    st.session_state.recent_questions.insert(0, sq_text)
+            if st.button(pill_label, key=f"sq_btn_{pill_label}_{abs(hash(full_q)) % 10000}", help=full_q, use_container_width=True):
+                if full_q not in st.session_state.recent_questions:
+                    st.session_state.recent_questions.insert(0, full_q)
                     st.session_state.recent_questions = st.session_state.recent_questions[:5]
-                st.session_state.messages = [{"role": "user", "content": sq_text}]
+                st.session_state.messages = [{"role": "user", "content": full_q}]
                 st.rerun()
 
 # ── Recent Questions (Last 5 Questions Stored) ──────────────────────────────
