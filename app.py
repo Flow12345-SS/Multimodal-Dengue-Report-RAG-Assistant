@@ -1,7 +1,9 @@
 import streamlit as st
 import os
 import re
+import io
 import requests
+from datetime import datetime
 
 # Page config MUST be the first command
 st.set_page_config(
@@ -21,7 +23,138 @@ from ingest import init_directories, clean_directories, ingest_documents
 
 init_directories()
 
-# ── Modern Healthcare AI Application Theme (Sky Blue + Mint Green) ───────────
+# ── ReportLab PDF Export Utility ─────────────────────────────────────────────
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+
+def generate_answer_pdf(question: str, answer: str, patient_name: str) -> bytes:
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=45,
+        leftMargin=45,
+        topMargin=45,
+        bottomMargin=45
+    )
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        'DocTitle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=17,
+        leading=21,
+        textColor=colors.HexColor('#0F172A'),
+        spaceAfter=4
+    )
+    subtitle_style = ParagraphStyle(
+        'DocSubtitle',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=10,
+        leading=14,
+        textColor=colors.HexColor('#0284C7'),
+        spaceAfter=14
+    )
+    meta_label = ParagraphStyle(
+        'MetaLabel',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor('#334155')
+    )
+    meta_val = ParagraphStyle(
+        'MetaVal',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor('#0F172A')
+    )
+    section_head = ParagraphStyle(
+        'SecHead',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=12,
+        leading=16,
+        textColor=colors.HexColor('#0369A1'),
+        spaceBefore=12,
+        spaceAfter=6
+    )
+    body_style = ParagraphStyle(
+        'Body',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=9.5,
+        leading=14.5,
+        textColor=colors.HexColor('#1E293B'),
+        spaceAfter=5
+    )
+
+    story = []
+    story.append(Paragraph("🩺 Multimodal Dengue Report RAG Assistant", title_style))
+    story.append(Paragraph("Clinical Decision Support System • Grounded Assessment Report", subtitle_style))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#38BDF8'), spaceAfter=12))
+
+    timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    meta_data = [
+        [
+            Paragraph("<b>Patient Name:</b>", meta_label), Paragraph(str(patient_name), meta_val),
+            Paragraph("<b>Timestamp:</b>", meta_label), Paragraph(timestamp_str, meta_val)
+        ],
+        [
+            Paragraph("<b>Platform:</b>", meta_label), Paragraph("AWS Bedrock Knowledge Base", meta_val),
+            Paragraph("<b>Status:</b>", meta_label), Paragraph("Clinically Grounded Response", meta_val)
+        ]
+    ]
+    t = Table(meta_data, colWidths=[80, 180, 80, 182])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F8FCFF')),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#BAE6FD')),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E0F2FE')),
+        ('TOPPADDING', (0,0), (-1,-1), 5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+        ('LEFTPADDING', (0,0), (-1,-1), 8),
+        ('RIGHTPADDING', (0,0), (-1,-1), 8),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 14))
+
+    # Query Section
+    safe_q = question.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    story.append(Paragraph("Clinical Query", section_head))
+    story.append(Paragraph(f"<b>Q:</b> {safe_q}", body_style))
+    story.append(Spacer(1, 10))
+
+    # Answer Section
+    story.append(Paragraph("Synthesized Grounded Response", section_head))
+    for line in answer.split('\n'):
+        line_clean = line.strip()
+        if line_clean:
+            safe_l = line_clean.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            safe_l = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', safe_l)
+            story.append(Paragraph(safe_l, body_style))
+        else:
+            story.append(Spacer(1, 4))
+
+    story.append(Spacer(1, 18))
+    story.append(HRFlowable(width="100%", thickness=0.75, color=colors.HexColor('#CBD5E1'), spaceAfter=8))
+    footer_text = Paragraph(
+        '<font size=7 color="#64748B">CONFIDENTIAL CLINICAL RECORD • For Decision Support Only • Powered by AWS Bedrock Knowledge Base + RAG</font>',
+        ParagraphStyle('Footer', parent=styles['Normal'], alignment=1)
+    )
+    story.append(footer_text)
+
+    doc.build(story)
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes
+
+# ── Modern Healthcare AI Application Theme (Sky Blue Theme) ───────────────────
 st.markdown("""
 <style>
     /* Google Fonts */
@@ -31,7 +164,7 @@ st.markdown("""
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* Entire App Background: Light Background #F8FCFF */
+    /* Entire App Background: #F8FCFF */
     .stApp {
         background-color: #F8FCFF !important;
         color: #0F172A !important;
@@ -55,13 +188,13 @@ st.markdown("""
         padding-right: 1.5rem !important;
     }
 
-    /* ── Header Banner (Blue → Sky Blue → Mint Green Gradient) ── */
+    /* ── Header Banner (Rich Healthcare Blue Gradient) ── */
     .sky-header-banner {
-        background: linear-gradient(135deg, #0EA5E9 0%, #38BDF8 50%, #4ADE80 100%) !important;
+        background: linear-gradient(135deg, #1E40AF 0%, #2563EB 35%, #0EA5E9 70%, #38BDF8 100%) !important;
         border-radius: 20px !important;
-        padding: 1.6rem 2.2rem !important;
+        padding: 1.65rem 2.2rem !important;
         color: #FFFFFF !important;
-        box-shadow: 0 10px 28px -4px rgba(14, 165, 233, 0.28), 0 4px 12px -2px rgba(74, 222, 128, 0.18) !important;
+        box-shadow: 0 10px 28px -4px rgba(37, 99, 235, 0.28), 0 4px 12px -2px rgba(14, 165, 233, 0.18) !important;
         margin-bottom: 1.25rem !important;
         text-align: center !important;
         border: 1px solid rgba(255, 255, 255, 0.35) !important;
@@ -79,7 +212,7 @@ st.markdown("""
     }
     .header-subtitle-text {
         font-size: 0.98rem !important;
-        color: #F0FDF4 !important;
+        color: #E0F2FE !important;
         margin: 0.35rem 0 0 0 !important;
         font-weight: 600 !important;
         opacity: 0.95 !important;
@@ -181,29 +314,132 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* ── Small Patient Badge ── */
+    /* ── Current Patient Badge (Highlighted Pill) ── */
     .patient-pill-badge {
         display: inline-flex;
         align-items: center;
         gap: 0.45rem;
         background: #FFFFFF;
-        border: 1.5px solid #BAE6FD;
+        border: 1.5px solid #38BDF8;
         border-radius: 9999px;
         padding: 0.45rem 1.15rem;
         font-size: 0.88rem;
         font-weight: 700;
-        color: #0369A1;
-        box-shadow: 0 4px 14px rgba(14, 165, 233, 0.08);
+        color: #0284C7;
+        box-shadow: 0 4px 14px rgba(14, 165, 233, 0.1);
         margin-bottom: 0.75rem;
         transition: all 0.25s ease;
     }
     .patient-pill-badge:hover {
-        border-color: #38BDF8;
+        border-color: #0EA5E9;
         transform: translateY(-1px);
-        box-shadow: 0 6px 18px rgba(14, 165, 233, 0.14);
+        box-shadow: 0 6px 18px rgba(14, 165, 233, 0.18);
     }
 
-    /* ── Upload Area (Larger rounded area, gradient border, soft hover) ── */
+    /* ── Grounded Response Badge ── */
+    .grounded-badge-container {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        background: #F0FDF4;
+        border: 1.5px solid #86EFAC;
+        border-radius: 9999px;
+        padding: 0.35rem 0.95rem;
+        margin-top: 0.35rem;
+        margin-bottom: 0.65rem;
+        box-shadow: 0 2px 8px rgba(34, 197, 94, 0.08);
+    }
+    .grounded-pill {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #15803D;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .grounded-subtext {
+        font-size: 0.78rem;
+        color: #0369A1;
+        font-weight: 600;
+        padding-left: 0.45rem;
+        border-left: 1.5px solid #86EFAC;
+    }
+
+    /* ── Suggested Questions Section ── */
+    .suggested-q-card {
+        background-color: #FFFFFF !important;
+        border: 1.5px solid #BAE6FD !important;
+        border-radius: 18px !important;
+        padding: 0.85rem 1.15rem !important;
+        margin-top: 0.65rem !important;
+        margin-bottom: 0.85rem !important;
+        box-shadow: 0 4px 14px rgba(14, 165, 233, 0.06) !important;
+    }
+    .suggested-q-title {
+        font-size: 0.92rem !important;
+        font-weight: 700 !important;
+        color: #0369A1 !important;
+        margin-bottom: 0.55rem !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.4rem !important;
+    }
+    div[data-testid="stColumn"] div:has(> button[key*="sq_btn_"]) button,
+    button[key*="sq_btn_"] {
+        background-color: #F0F9FF !important;
+        border: 1.5px solid #BAE6FD !important;
+        color: #0284C7 !important;
+        border-radius: 14px !important;
+        font-weight: 600 !important;
+        font-size: 0.82rem !important;
+        padding: 0.45rem 0.65rem !important;
+        box-shadow: 0 2px 6px rgba(14, 165, 233, 0.06) !important;
+        transition: all 0.2s ease !important;
+        min-height: 38px !important;
+        height: 100% !important;
+        white-space: normal !important;
+        line-height: 1.3 !important;
+    }
+    div[data-testid="stColumn"] div:has(> button[key*="sq_btn_"]) button:hover,
+    button[key*="sq_btn_"]:hover {
+        background-color: #E0F2FE !important;
+        border-color: #0EA5E9 !important;
+        color: #0369A1 !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.16) !important;
+    }
+
+    /* ── Recent Questions ── */
+    .recent-q-item {
+        font-size: 0.86rem !important;
+        color: #334155 !important;
+        font-weight: 500 !important;
+        padding: 0.25rem 0 !important;
+    }
+
+    /* ── Download PDF Button ── */
+    .stDownloadButton > button {
+        background: #FFFFFF !important;
+        border: 1.5px solid #2563EB !important;
+        color: #2563EB !important;
+        border-radius: 12px !important;
+        font-weight: 700 !important;
+        font-size: 0.86rem !important;
+        padding: 0.45rem 1.1rem !important;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12) !important;
+        transition: all 0.2s ease-in-out !important;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    .stDownloadButton > button:hover {
+        background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 100%) !important;
+        color: #FFFFFF !important;
+        border-color: #2563EB !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28) !important;
+    }
+
+    /* ── Upload Area (Dashed Sky Blue border, rounded 18px) ── */
     div[data-testid="stFileUploader"] {
         margin-bottom: 0.35rem !important;
     }
@@ -238,20 +474,20 @@ st.markdown("""
 
     /* Process Documents Button */
     .stButton > button {
-        background: linear-gradient(135deg, #0EA5E9 0%, #38BDF8 60%, #4ADE80 100%) !important;
+        background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 60%, #38BDF8 100%) !important;
         color: #FFFFFF !important;
         border: none !important;
         border-radius: 14px !important;
         font-weight: 700 !important;
         font-size: 0.9rem !important;
         padding: 0.55rem 1.3rem !important;
-        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.25) !important;
+        box-shadow: 0 4px 16px rgba(37, 99, 235, 0.25) !important;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
         margin-top: 0.35rem !important;
     }
     .stButton > button:hover {
-        background: linear-gradient(135deg, #0284C7 0%, #0EA5E9 60%, #22C55E 100%) !important;
-        box-shadow: 0 8px 24px rgba(14, 165, 233, 0.38) !important;
+        background: linear-gradient(135deg, #1D4ED8 0%, #0284C7 60%, #0EA5E9 100%) !important;
+        box-shadow: 0 8px 24px rgba(37, 99, 235, 0.38) !important;
         transform: translateY(-2px) !important;
         color: #FFFFFF !important;
     }
@@ -328,11 +564,11 @@ st.markdown("""
         padding: 0.4rem 0 !important;
     }
     [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] {
-        background: linear-gradient(135deg, #0EA5E9 0%, #2563EB 100%) !important;
+        background: linear-gradient(135deg, #1E40AF 0%, #2563EB 60%, #0EA5E9 100%) !important;
         color: #FFFFFF !important;
         border-radius: 20px 20px 4px 20px !important;
         padding: 0.85rem 1.35rem !important;
-        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.22) !important;
+        box-shadow: 0 4px 16px rgba(37, 99, 235, 0.22) !important;
         max-width: 80% !important;
         margin-left: auto !important;
         border: 1px solid rgba(255, 255, 255, 0.15) !important;
@@ -344,7 +580,7 @@ st.markdown("""
         margin: 0 !important;
     }
     [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="chatAvatarIcon-user"] {
-        background: #0EA5E9 !important;
+        background: #2563EB !important;
         color: #FFFFFF !important;
     }
 
@@ -388,7 +624,7 @@ st.markdown("""
     .answer-card-box {
         background-color: #FFFFFF !important;
         border: 1.5px solid #BAE6FD !important;
-        border-left: 5px solid #38BDF8 !important;
+        border-left: 5px solid #2563EB !important;
         border-radius: 18px !important;
         padding: 1.25rem 1.6rem !important;
         margin-top: 0.5rem !important;
@@ -438,7 +674,7 @@ st.markdown("""
         white-space: pre-wrap !important;
     }
 
-    /* ── Clinical Evidence Card (Clean White, Rounded 18px, Light Blue Border) ── */
+    /* ── Clinical Evidence Card (Clean White, Rounded 18px, Blue Border) ── */
     .clinical-evidence-card {
         background-color: #FFFFFF !important;
         border: 1.5px solid #BAE6FD !important;
@@ -490,7 +726,7 @@ st.markdown("""
     }
     .evidence-bullet-list li::before {
         content: "•" !important;
-        color: #38BDF8 !important;
+        color: #2563EB !important;
         font-weight: 900 !important;
         font-size: 1.25rem !important;
         position: absolute !important;
@@ -508,20 +744,20 @@ st.markdown("""
         transition: all 0.25s ease-in-out !important;
     }
     div[data-testid="stChatInput"]:focus-within {
-        border-color: #38BDF8 !important;
-        box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.25), 0 8px 26px rgba(14, 165, 233, 0.14) !important;
+        border-color: #2563EB !important;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2), 0 8px 26px rgba(14, 165, 233, 0.14) !important;
     }
     div[data-testid="stChatInput"] button {
-        background: linear-gradient(135deg, #0EA5E9 0%, #38BDF8 60%, #4ADE80 100%) !important;
+        background: linear-gradient(135deg, #1E40AF 0%, #2563EB 60%, #0EA5E9 100%) !important;
         color: #FFFFFF !important;
         border-radius: 50% !important;
         border: none !important;
-        box-shadow: 0 3px 10px rgba(14, 165, 233, 0.28) !important;
+        box-shadow: 0 3px 10px rgba(37, 99, 235, 0.28) !important;
         transition: transform 0.2s ease-in-out, box-shadow 0.2s ease !important;
     }
     div[data-testid="stChatInput"] button:hover {
         transform: scale(1.1) !important;
-        box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4) !important;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
     }
     div[data-testid="stChatInput"] button svg {
         fill: #FFFFFF !important;
@@ -555,7 +791,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Header Section (Gradient Banner: Blue → Sky Blue → Mint Green) ────────────
+# ── Header Section (Professional Blue Gradient Banner) ───────────────────────
 st.markdown("""
 <div class="sky-header-banner">
     <h1 class="header-title-text">🩺 Multimodal Dengue Report RAG Assistant</h1>
@@ -614,6 +850,7 @@ with col2:
                         clean_directories()
                         st.cache_resource.clear()
                         st.session_state.messages = []
+                        st.session_state.active_patient_display = None
                         st.rerun()
         else:
             # If files were previously ingested and reside in reports/
@@ -635,6 +872,7 @@ with col2:
                             clean_directories()
                             st.cache_resource.clear()
                             st.session_state.messages = []
+                            st.session_state.active_patient_display = None
                             st.rerun()
 
         process_clicked = st.button("🚀 Process Documents", use_container_width=True)
@@ -678,22 +916,25 @@ with col4:
 # Divider
 st.markdown("---")
 
-# ── Small Patient Badge (Current Patient: Rahul (D001) or Active Patient) ────
+# ── Dynamic Current Patient Badge ────────────────────────────────────────────
 active_meta = get_active_report_meta()
-current_patient_name = active_meta.get("patient_name")
-current_patient_id = active_meta.get("patient_id")
+if "active_patient_display" not in st.session_state or not st.session_state.active_patient_display:
+    cur_p_name = active_meta.get("patient_name")
+    cur_p_id = active_meta.get("patient_id")
+    if not cur_p_name or cur_p_name in ["Not specified", "Extracted", "Unknown"]:
+        cur_p_name = "Rahul"
+    if not cur_p_id or cur_p_id in ["Not specified", "Extracted", "Unknown"]:
+        cur_p_id = "D001"
+    st.session_state.active_patient_display = f"{cur_p_name} ({cur_p_id})"
 
-if not current_patient_name or current_patient_name in ["Not specified", "Extracted", "Unknown"]:
-    current_patient_name = "Rahul"
-if not current_patient_id or current_patient_id in ["Not specified", "Extracted", "Unknown"]:
-    current_patient_id = "D001"
-
-st.markdown(
-    f'<div style="margin-bottom: 0.65rem;">'
-    f'<span class="patient-pill-badge">👤 Current Patient: <strong>{current_patient_name} ({current_patient_id})</strong></span>'
-    f'</div>',
-    unsafe_allow_html=True
-)
+col_badge_left, col_badge_right = st.columns([0.65, 0.35])
+with col_badge_left:
+    st.markdown(
+        f'<div style="margin-bottom: 0.5rem;">'
+        f'<span class="patient-pill-badge">👤 Current Patient: <strong>{st.session_state.active_patient_display}</strong></span>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
 # ── Document Ingestion Processing ────────────────────────────────────────────
 if process_clicked:
@@ -715,6 +956,7 @@ if process_clicked:
                 st.cache_resource.clear()
                 p_name = meta_info.get("patient_name", "Extracted")
                 p_id = meta_info.get("patient_id", "Extracted")
+                st.session_state.active_patient_display = f"{p_name} ({p_id})"
                 st.toast(f"✅ Ingested: {p_name} ({p_id})", icon="🟢")
                 st.success(f"✅ Report processed successfully! Active: **{p_name}** ({p_id}) | Chunks: {meta_info.get('chunk_count', 0)}")
                 st.rerun()
@@ -723,12 +965,58 @@ if process_clicked:
     else:
         st.warning("Please upload a medical report (PDF, TXT, DOCX) first.")
 
-# ── Session State Management (Latest Q&A Only) ──────────────────────────────
+# ── Session State Management (Latest Q&A Only & Recent Questions) ───────────
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Input query - rounded input box, blue glow on focus, modern send button
+if "recent_questions" not in st.session_state:
+    st.session_state.recent_questions = [
+        "What is the diagnosis?",
+        "What is the platelet count?",
+        "What is the risk level?"
+    ]
+
+# ── Suggested Questions Section (Clickable Pills) ───────────────────────────
+st.markdown("""
+<div class="suggested-q-title">💡 Suggested Questions</div>
+""", unsafe_allow_html=True)
+
+suggested_queries = [
+    "What is the diagnosis?",
+    "What is the platelet count?",
+    "What is the risk level?",
+    "Summarize the report.",
+    "What recommendations are provided?"
+]
+
+sq_cols = st.columns(5)
+for col, sq_text in zip(sq_cols, suggested_queries):
+    with col:
+        if st.button(sq_text, key=f"sq_btn_{sq_text}", use_container_width=True):
+            if sq_text not in st.session_state.recent_questions:
+                st.session_state.recent_questions.insert(0, sq_text)
+                st.session_state.recent_questions = st.session_state.recent_questions[:5]
+            st.session_state.messages = [{"role": "user", "content": sq_text}]
+            st.rerun()
+
+# ── Recent Questions (Last 5 Questions Stored) ──────────────────────────────
+if st.session_state.recent_questions:
+    with st.expander("🕒 Recent Questions", expanded=False):
+        for rq in st.session_state.recent_questions:
+            col_rq_text, col_rq_btn = st.columns([0.85, 0.15])
+            with col_rq_text:
+                st.markdown(f'<div class="recent-q-item">• {rq}</div>', unsafe_allow_html=True)
+            with col_rq_btn:
+                if st.button("Ask ↗", key=f"ask_rq_{rq}", use_container_width=True):
+                    st.session_state.messages = [{"role": "user", "content": rq}]
+                    st.rerun()
+
+# ── Input query (Rounded input box, blue glow on focus, modern send button) ─
 if prompt := st.chat_input("Ask about diagnosis, platelet count, risk level, recommendations, or patient details..."):
+    # Add to recent questions (max 5)
+    if prompt not in st.session_state.recent_questions:
+        st.session_state.recent_questions.insert(0, prompt)
+        st.session_state.recent_questions = st.session_state.recent_questions[:5]
     # Keep only the latest prompt
     st.session_state.messages = [{"role": "user", "content": prompt}]
 
@@ -760,13 +1048,12 @@ def render_styled_answer_cards(answer_text: str) -> str:
             matches.append((m.start(), m.end(), title))
 
     if not matches:
-        # Standard answer card with clean white background and light blue border
         return f'<div class="answer-card-box">{answer_text}</div>'
 
     matches.sort(key=lambda x: x[0])
     cards_html = []
 
-    # Check for preamble before first matched section
+    # Preamble before first section
     if matches[0][0] > 0:
         preamble = answer_text[:matches[0][0]].strip()
         if preamble:
@@ -805,10 +1092,29 @@ with chat_container:
                 answer, retrieved_patient_ui, evidence_list = generate_answer(prompt, model_name=selected_model)
                 status.update(label="Assessment Complete ✅", state="complete")
 
+            # Update Current Patient dynamically based on retrieved record
+            if evidence_list and isinstance(evidence_list, dict):
+                ret_pname = evidence_list.get("patient_name")
+                ret_pid = evidence_list.get("patient_id")
+                if ret_pname and ret_pname != "Not specified":
+                    st.session_state.active_patient_display = f"{ret_pname} ({ret_pid or 'ID Unknown'})"
+
             # Show Retrieved Patient Card
             if retrieved_patient_ui:
                 patient_card_html = f'<div class="retrieved-patient-box">📋 {retrieved_patient_ui}</div>'
                 st.markdown(patient_card_html, unsafe_allow_html=True)
+
+            # Show Grounded Response Badge above Answer
+            grounded_badge_html = (
+                f'<div class="grounded-badge-container">'
+                f'<span class="grounded-pill">✅ Grounded Response</span>'
+                f'<span class="grounded-subtext">Retrieved from Bedrock Knowledge Base</span>'
+                f'</div>'
+            )
+            if hasattr(st, "html"):
+                st.html(grounded_badge_html)
+            else:
+                st.markdown(grounded_badge_html, unsafe_allow_html=True)
 
             # Show Answer Section in modern redesigned cards
             answer_cards_html = render_styled_answer_cards(answer)
@@ -817,7 +1123,28 @@ with chat_container:
             else:
                 st.markdown(answer_cards_html, unsafe_allow_html=True)
 
-            # Show Clean Clinical Evidence Card
+            # Show Download Answer as PDF Button
+            target_pname = st.session_state.active_patient_display
+            if evidence_list and isinstance(evidence_list, dict):
+                ep = evidence_list.get("patient_name")
+                if ep and ep != "Not specified":
+                    target_pname = ep
+
+            pdf_bytes = generate_answer_pdf(
+                question=prompt,
+                answer=answer,
+                patient_name=target_pname
+            )
+
+            st.download_button(
+                label="📥 Download Answer as PDF",
+                data=pdf_bytes,
+                file_name=f"Clinical_Answer_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                mime="application/pdf",
+                use_container_width=False
+            )
+
+            # Show Clean Clinical Evidence Card (Zero Technical RAG Details)
             if evidence_list:
                 if isinstance(evidence_list, dict):
                     ev_name = evidence_list.get("patient_name", "Not specified")
@@ -855,7 +1182,7 @@ with chat_container:
             final_output = f"{retrieved_patient_ui}\n\n{answer}" if retrieved_patient_ui else answer
             st.session_state.messages.append({"role": "assistant", "content": final_output})
 
-# ── Tiny Footer (Exact text as requested) ────────────────────────────────────
+# ── Tiny Footer ──────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="app-footer">
     Powered by AWS Bedrock Knowledge Base + RAG
