@@ -1098,7 +1098,15 @@ with chat_container:
     # Render messages (only latest pair)
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"], unsafe_allow_html=True)
+            if message["role"] == "assistant":
+                clean_content = re.sub(r'^\s*📋?\s*\*\*Retrieved Patient:\*\*.*?(?:\n\n|\n)', '', message["content"], flags=re.I).strip()
+                ans_html = render_styled_answer_cards(clean_content)
+                if hasattr(st, "html"):
+                    st.html(ans_html)
+                else:
+                    st.markdown(ans_html, unsafe_allow_html=True)
+            else:
+                st.markdown(message["content"], unsafe_allow_html=True)
 
     # Trigger generation when user enters a prompt
     if len(st.session_state.messages) == 1 and st.session_state.messages[-1]["role"] == "user":
@@ -1116,11 +1124,6 @@ with chat_container:
                 ret_pid = evidence_list.get("patient_id")
                 if ret_pname and ret_pname != "Not specified":
                     st.session_state.active_patient_display = f"{ret_pname} ({ret_pid or 'ID Unknown'})"
-
-            # Show Retrieved Patient Card
-            if retrieved_patient_ui:
-                patient_card_html = f'<div class="retrieved-patient-box">📋 {retrieved_patient_ui}</div>'
-                st.markdown(patient_card_html, unsafe_allow_html=True)
 
             # Show Grounded Response Badge above Answer
             grounded_badge_html = (
@@ -1197,8 +1200,7 @@ with chat_container:
                         st.markdown(clinical_card_html, unsafe_allow_html=True)
 
             # Save latest state
-            final_output = f"{retrieved_patient_ui}\n\n{answer}" if retrieved_patient_ui else answer
-            st.session_state.messages.append({"role": "assistant", "content": final_output})
+            st.session_state.messages.append({"role": "assistant", "content": answer})
 
 # ── Tiny Footer ──────────────────────────────────────────────────────────────
 st.markdown("""
