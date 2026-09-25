@@ -8,4 +8,5 @@ langchain-ollama
 faiss-cpu
 sentence-transformers
 pypdf
+python-docx
 pandas

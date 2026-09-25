@@ -427,8 +427,8 @@ with col2:
     with st.container(border=True):
         st.markdown('<div class="col-header">📄 Document Upload</div>', unsafe_allow_html=True)
         uploaded_files = st.file_uploader(
-            "Upload PDF Reports",
-            type="pdf",
+            "Upload Medical Reports (PDF, TXT, DOCX)",
+            type=["pdf", "txt", "docx"],
             accept_multiple_files=True,
             label_visibility="collapsed"
         )
@@ -440,7 +440,7 @@ with col3:
         st.markdown('<div class="col-header">🗄️ Index Status</div>', unsafe_allow_html=True)
         if load_vectorstore() is not None:
             st.markdown('<span class="pill-badge pill-green">🟢 FAISS Ready</span>', unsafe_allow_html=True)
-            st.markdown('<div class="status-caption">Vector index active</div>', unsafe_allow_html=True)
+            st.markdown('<div class="status-caption">Active report index ready</div>', unsafe_allow_html=True)
         else:
             st.markdown('<span class="pill-badge pill-red">🔴 FAISS Not Loaded</span>', unsafe_allow_html=True)
             st.markdown('<div class="status-caption">Upload & process report</div>', unsafe_allow_html=True)
@@ -476,25 +476,29 @@ st.markdown("---")
 # ── Document Ingestion Processing ────────────────────────────────────────────
 if process_clicked:
     if uploaded_files:
-        with st.spinner("Clearing old data and ingesting new files..."):
+        with st.spinner("Clearing previous session and ingesting new report..."):
             st.cache_resource.clear()
             clean_directories()
+            st.session_state.messages = []
 
             for uploaded_file in uploaded_files:
-                with open(os.path.join("reports", uploaded_file.name), "wb") as f:
+                dest_path = os.path.join("reports", uploaded_file.name)
+                with open(dest_path, "wb") as f:
                     f.write(uploaded_file.getbuffer())
 
             from ingest import ingest_documents
-            success, indexed_patients = ingest_documents()
+            success, meta_info = ingest_documents()
 
             if success:
                 st.cache_resource.clear()
-                st.toast("✅ Documents Processed Successfully", icon="🟢")
-                st.success("✅ Documents Processed Successfully")
+                p_name = meta_info.get("patient_name", "Extracted")
+                p_id = meta_info.get("patient_id", "Extracted")
+                st.toast(f"✅ Ingested: {p_name} ({p_id})", icon="🟢")
+                st.success(f"✅ Report processed successfully! Active: **{p_name}** ({p_id}) | Chunks: {meta_info.get('chunk_count', 0)}")
             else:
                 st.error("Failed to ingest documents.")
     else:
-        st.warning("Please upload a PDF report first.")
+        st.warning("Please upload a medical report (PDF, TXT, DOCX) first.")
 
 # ── Session State Management (Latest Q&A Only) ──────────────────────────────
 if "messages" not in st.session_state:
@@ -520,7 +524,7 @@ with chat_container:
 
         with st.chat_message("assistant"):
             with st.status("Analyzing clinical records...", expanded=False) as status:
-                answer, retrieved_patient_ui = generate_answer(prompt, model_name=selected_model)
+                answer, retrieved_patient_ui, evidence_list = generate_answer(prompt, model_name=selected_model)
                 status.update(label="Assessment Complete ✅", state="complete")
 
             # Show Retrieved Patient Card
@@ -528,9 +532,16 @@ with chat_container:
                 patient_card_html = f'<div class="retrieved-patient-box">📋 {retrieved_patient_ui}</div>'
                 st.markdown(patient_card_html, unsafe_allow_html=True)
 
-            # Show Answer Card with subtle fade-in animation
+            # Show Answer Card
             answer_card_html = f'<div class="answer-card-box">{answer}</div>'
             st.markdown(answer_card_html, unsafe_allow_html=True)
+
+            # Show Evidence Expander
+            if evidence_list:
+                with st.expander("🔍 View Retrieved Evidence / Source Chunks", expanded=False):
+                    for i, ev in enumerate(evidence_list):
+                        st.markdown(f"**Chunk #{i+1}** | *Source:* `{ev['source_file']}` | *Distance Score:* `{ev['score']}`")
+                        st.text(ev['content'])
 
             # Save latest state
             final_output = f"{retrieved_patient_ui}\n\n{answer}" if retrieved_patient_ui else answer
