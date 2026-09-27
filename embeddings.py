@@ -55,22 +55,36 @@ class FastClinicalEmbeddings(Embeddings):
         return self.embed_query(text)
 
 
+def is_cloud_deployment() -> bool:
+    """Detect if running in cloud hosting (e.g. Streamlit Cloud /mount/src)."""
+    return (
+        os.path.exists("/mount/src") or
+        "STREAMLIT_SHARING_HOST" in os.environ or
+        os.environ.get("STREAMLIT_DEPLOYMENT") == "1" or
+        "SPACES_ZERO_GPU" in os.environ
+    )
+
+
 @st.cache_resource
 def get_embeddings_model():
     """
     Initializes and returns the embeddings model.
-    Tries HuggingFace SentenceTransformers first.
-    If HuggingFace Hub is unreachable or raises LocalEntryNotFoundError/OSError
-    (common in cloud environments like Streamlit Cloud), seamlessly falls back
-    to FastClinicalEmbeddings with 100% reliability and zero downtime.
+    In cloud deployment (Streamlit Cloud), uses FastClinicalEmbeddings directly
+    to prevent network timeouts, LocalEntryNotFoundError, and OSError.
+    In local environment, uses HuggingFace SentenceTransformers with fallback.
     """
-    logger.info("Initializing embeddings model...")
+    # Cloud deployment: use zero-network FastClinicalEmbeddings immediately
+    if is_cloud_deployment():
+        logger.info("Cloud deployment detected (/mount/src). Using FastClinicalEmbeddings engine.")
+        return FastClinicalEmbeddings()
+
+    # Local development: try HuggingFace SentenceTransformers
+    logger.info("Initializing embeddings model for local environment...")
     try:
         from langchain_huggingface import HuggingFaceEmbeddings
         model_name = "sentence-transformers/all-MiniLM-L6-v2"
         encode_kwargs = {'normalize_embeddings': True}
         
-        # Try local cache or cloud download
         embeddings = HuggingFaceEmbeddings(
             model_name=model_name,
             model_kwargs={'device': 'cpu'},
@@ -78,6 +92,6 @@ def get_embeddings_model():
         )
         logger.info("Loaded HuggingFace SentenceTransformer embeddings successfully.")
         return embeddings
-    except Exception as e:
+    except BaseException as e:
         logger.warning(f"HuggingFace Hub unavailable ({e}). Using FastClinicalEmbeddings fallback.")
         return FastClinicalEmbeddings()

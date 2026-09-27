@@ -1567,7 +1567,12 @@ if process_clicked:
                     f.write(uploaded_file.getbuffer())
 
             from ingest import ingest_documents
-            success, meta_info = ingest_documents()
+            try:
+                success, meta_info = ingest_documents()
+            except Exception as e:
+                logger.error(f"Ingestion error: {e}")
+                st.error(f"Error processing documents: {e}")
+                success, meta_info = False, {}
 
             if success:
                 st.cache_resource.clear()
@@ -1582,7 +1587,10 @@ if process_clicked:
                 st.success(f"✅ Report processed successfully! Active: **{st.session_state.active_patient_display}** | Chunks: {meta_info.get('chunk_count', 0)}")
                 st.rerun()
             else:
-                st.error("Failed to ingest documents.")
+                if not meta_info:
+                    pass
+                else:
+                    st.error("Failed to ingest documents.")
     else:
         st.warning("Please upload a medical report (PDF, TXT, DOCX) first.")
 
