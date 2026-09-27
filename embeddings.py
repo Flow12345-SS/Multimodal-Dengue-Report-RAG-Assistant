@@ -1,7 +1,4 @@
 import os
-os.environ["HF_HUB_OFFLINE"] = "1"
-os.environ["TRANSFORMERS_OFFLINE"] = "1"
-
 import streamlit as st
 
 @st.cache_resource
@@ -21,13 +18,17 @@ def get_embeddings_model():
     model_name = "sentence-transformers/all-MiniLM-L6-v2"
     encode_kwargs = {'normalize_embeddings': True}
     
+    # 1. Try loading from local cache first (instant if already present)
     try:
         embeddings = HuggingFaceEmbeddings(
             model_name=model_name,
             model_kwargs={'device': 'cpu', 'local_files_only': True},
             encode_kwargs=encode_kwargs
         )
-    except Exception:
+    except Exception as e:
+        logger.info(f"Local embeddings cache not found ({e}), downloading for cloud deployment...")
+        os.environ.pop("HF_HUB_OFFLINE", None)
+        os.environ.pop("TRANSFORMERS_OFFLINE", None)
         embeddings = HuggingFaceEmbeddings(
             model_name=model_name,
             model_kwargs={'device': 'cpu'},
