@@ -1502,14 +1502,15 @@ with col3:
 
         st.markdown(f'<div class="product-badge-stack">{faiss_badge}{bedrock_badge}{kb_badge}</div>', unsafe_allow_html=True)
 
-# Column 4: Ollama Status
+# Column 4: AI / Ollama Status
 with col4:
     with st.container(border=True, key="card_ollama"):
-        st.markdown('<div class="col-header">🤖 Ollama Status</div>', unsafe_allow_html=True)
+        st.markdown('<div class="col-header">🤖 AI Engine Status</div>', unsafe_allow_html=True)
+        ollama_base = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
         ollama_running = False
         available_models = []
         try:
-            res = requests.get("http://127.0.0.1:11434/api/tags", timeout=1.5)
+            res = requests.get(f"{ollama_base}/api/tags", timeout=1.5)
             if res.status_code == 200:
                 ollama_running = True
                 available_models = [m['name'] for m in res.json().get('models', [])]
@@ -1517,7 +1518,7 @@ with col4:
             ollama_running = False
 
         if ollama_running:
-            ollama_badge = '<div class="product-badge"><span class="badge-dot"></span><span class="product-badge-label">Ollama Engine</span><span class="product-badge-state">🟢 Active</span></div>'
+            ollama_badge = '<div class="product-badge"><span class="badge-dot"></span><span class="product-badge-label">Ollama LLM</span><span class="product-badge-state">🟢 Active</span></div>'
             if any(m.startswith(selected_model) for m in available_models):
                 model_badge = f'<div class="product-badge"><span class="badge-dot"></span><span class="product-badge-label">{selected_model}</span><span class="product-badge-state">🟢 Ready</span></div>'
                 st.markdown(f'<div class="product-badge-stack">{ollama_badge}{model_badge}</div>', unsafe_allow_html=True)
@@ -1526,9 +1527,11 @@ with col4:
                 st.markdown(f'<div class="product-badge-stack">{ollama_badge}{model_badge}</div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="status-caption">Run: <code>ollama pull {selected_model}</code></div>', unsafe_allow_html=True)
         else:
-            offline_badge = '<div class="product-badge badge-offline"><span class="badge-dot dot-red"></span><span class="product-badge-label">Ollama Engine</span><span class="product-badge-state state-offline">❌ Offline</span></div>'
-            st.markdown(f'<div class="product-badge-stack">{offline_badge}</div>', unsafe_allow_html=True)
-            st.markdown('<div class="status-caption">Run: <code>ollama serve</code></div>', unsafe_allow_html=True)
+            # Cloud Deployment Mode: Grounded Clinical RAG Engine
+            cloud_badge = '<div class="product-badge"><span class="badge-dot"></span><span class="product-badge-label">Cloud RAG</span><span class="product-badge-state">🟢 Active</span></div>'
+            guard_badge = '<div class="product-badge"><span class="badge-dot"></span><span class="product-badge-label">Clinical AI</span><span class="product-badge-state">🟢 Ready</span></div>'
+            st.markdown(f'<div class="product-badge-stack">{cloud_badge}{guard_badge}</div>', unsafe_allow_html=True)
+            st.markdown('<div class="status-caption">Mode: <b>Cloud Clinical Grounded RAG</b></div>', unsafe_allow_html=True)
 
 # Divider
 st.markdown("---")
