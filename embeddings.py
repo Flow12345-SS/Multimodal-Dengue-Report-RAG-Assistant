@@ -1,3 +1,7 @@
+import os
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+
 import streamlit as st
 
 @st.cache_resource
@@ -13,16 +17,22 @@ def get_embeddings_model():
     
     logger.info("Loading embeddings model...")
     start = time.time()
-    
+
     model_name = "sentence-transformers/all-MiniLM-L6-v2"
-    model_kwargs = {'device': 'cpu'} # Change to 'cuda' if GPU is available
     encode_kwargs = {'normalize_embeddings': True}
     
-    embeddings = HuggingFaceEmbeddings(
-        model_name=model_name,
-        model_kwargs=model_kwargs,
-        encode_kwargs=encode_kwargs
-    )
+    try:
+        embeddings = HuggingFaceEmbeddings(
+            model_name=model_name,
+            model_kwargs={'device': 'cpu', 'local_files_only': True},
+            encode_kwargs=encode_kwargs
+        )
+    except Exception:
+        embeddings = HuggingFaceEmbeddings(
+            model_name=model_name,
+            model_kwargs={'device': 'cpu'},
+            encode_kwargs=encode_kwargs
+        )
     
     logger.info(f"Embeddings model loaded in {time.time() - start:.2f} seconds.")
     return embeddings

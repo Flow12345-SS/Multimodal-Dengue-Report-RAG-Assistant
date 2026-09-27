@@ -20,7 +20,7 @@ importlib.reload(rag_pipeline)
 importlib.reload(ingest)
 importlib.reload(multilingual)
 
-from rag_pipeline import generate_answer, load_vectorstore, get_active_report_meta
+from rag_pipeline import generate_answer, load_vectorstore, get_active_report_meta, clean_simple_direct_answer
 from ingest import init_directories, clean_directories, ingest_documents
 from utils.multilingual import (
     SUPPORTED_LANGUAGES,
@@ -57,7 +57,7 @@ def generate_answer_pdf(question: str, answer: str, patient_name: str) -> bytes:
             fontName='Helvetica-Bold',
             fontSize=17,
             leading=21,
-            textColor=colors.HexColor('#0F172A'),
+            textColor=colors.HexColor('#050814'),
             spaceAfter=4
         )
         subtitle_style = ParagraphStyle(
@@ -66,7 +66,7 @@ def generate_answer_pdf(question: str, answer: str, patient_name: str) -> bytes:
             fontName='Helvetica',
             fontSize=10,
             leading=14,
-            textColor=colors.HexColor('#0284C7'),
+            textColor=colors.HexColor('#65A30D'),
             spaceAfter=14
         )
         meta_label = ParagraphStyle(
@@ -75,7 +75,7 @@ def generate_answer_pdf(question: str, answer: str, patient_name: str) -> bytes:
             fontName='Helvetica-Bold',
             fontSize=9,
             leading=13,
-            textColor=colors.HexColor('#334155')
+            textColor=colors.HexColor('#365314')
         )
         meta_val = ParagraphStyle(
             'MetaVal',
@@ -83,7 +83,7 @@ def generate_answer_pdf(question: str, answer: str, patient_name: str) -> bytes:
             fontName='Helvetica',
             fontSize=9,
             leading=13,
-            textColor=colors.HexColor('#0F172A')
+            textColor=colors.HexColor('#111827')
         )
         section_head = ParagraphStyle(
             'SecHead',
@@ -91,7 +91,7 @@ def generate_answer_pdf(question: str, answer: str, patient_name: str) -> bytes:
             fontName='Helvetica-Bold',
             fontSize=12,
             leading=16,
-            textColor=colors.HexColor('#0369A1'),
+            textColor=colors.HexColor('#365314'),
             spaceBefore=12,
             spaceAfter=6
         )
@@ -101,14 +101,14 @@ def generate_answer_pdf(question: str, answer: str, patient_name: str) -> bytes:
             fontName='Helvetica',
             fontSize=9.5,
             leading=14.5,
-            textColor=colors.HexColor('#1E293B'),
+            textColor=colors.HexColor('#111827'),
             spaceAfter=5
         )
 
         story = []
         story.append(Paragraph("🩺 Multimodal Dengue Report RAG Assistant", title_style))
         story.append(Paragraph("Clinical Decision Support System • Grounded Assessment Report", subtitle_style))
-        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#38BDF8'), spaceAfter=12))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#84CC16'), spaceAfter=12))
 
         timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         meta_data = [
@@ -123,9 +123,9 @@ def generate_answer_pdf(question: str, answer: str, patient_name: str) -> bytes:
         ]
         t = Table(meta_data, colWidths=[80, 180, 80, 182])
         t.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F8FCFF')),
-            ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#BAE6FD')),
-            ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E0F2FE')),
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F7FEE7')),
+            ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#D9F99D')),
+            ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E8F9D7')),
             ('TOPPADDING', (0,0), (-1,-1), 5),
             ('BOTTOMPADDING', (0,0), (-1,-1), 5),
             ('LEFTPADDING', (0,0), (-1,-1), 8),
@@ -181,20 +181,32 @@ def generate_answer_pdf(question: str, answer: str, patient_name: str) -> bytes:
         )
         return txt_content.encode("utf-8")
 
-# ── Modern Healthcare AI Application Theme (Sky Blue Theme) ───────────────────
+# ── Chain360 Inspired Theme (Vibrant Lime Green #74D116, Pitch Black #0D0D0D, Pure White #FFFFFF) ──
 st.markdown("""
 <style>
     /* Google Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap');
 
-    html, body, [class*="css"] {
-        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    html, body, [class*="css"], .stApp {
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
 
-    /* Entire App Background: #F8FCFF */
-    .stApp {
-        background-color: #F8FCFF !important;
-        color: #0F172A !important;
+    /* ── 1. GLOBAL BACKGROUND: Soft gradient canvas — elegant, not overwhelming ── */
+    html, body, #root, .stApp, [data-testid="stAppViewContainer"], .main,
+    section[data-testid="stMain"], div.stMainBlockContainer {
+        background: linear-gradient(145deg, #F4FDE8 0%, #E8F9D0 40%, #DCFCA7 100%) !important;
+        color: #0D0D0D !important;
+    }
+
+
+
+    /* Transparent Streamlit Header */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        background-color: transparent !important;
+    }
+    header[data-testid="stHeader"] svg {
+        color: #0D0D0D !important;
     }
 
     /* Centered Fixed-Width Container */
@@ -207,341 +219,503 @@ st.markdown("""
         padding-right: 1.5rem !important;
     }
 
-    /* Constrain bottom chat input to match exact container width */
-    div[data-testid="stBottom"] > div {
-        max-width: 1280px !important;
-        margin: 0 auto !important;
-        padding-left: 1.5rem !important;
-        padding-right: 1.5rem !important;
-    }
 
-    /* ── Header Banner (Modern Healthcare Blue + Teal Gradient) ── */
-    .sky-header-banner {
-        background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 52%, #14B8A6 100%) !important;
-        border-radius: 20px !important;
-        padding: 1.85rem 2.4rem !important;
+    /* ── 2. HEADER HERO BANNER — Deep Forest Green, matches UI flow ── */
+    .saas-hero-banner {
+        background: linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%) !important;
+        border-radius: 22px !important;
+        padding: 2.2rem 2.5rem !important;
         color: #FFFFFF !important;
-        box-shadow: 0 12px 34px -4px rgba(37, 99, 235, 0.28), 0 4px 16px -2px rgba(20, 184, 166, 0.22) !important;
-        margin-bottom: 1.35rem !important;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(116,209,22,0.3) !important;
+        margin-bottom: 1.5rem !important;
         text-align: center !important;
-        border: 1px solid rgba(255, 255, 255, 0.35) !important;
+        border: 2px solid rgba(116,209,22,0.5) !important;
         position: relative !important;
         overflow: hidden !important;
     }
-    .header-title-text {
-        font-size: 2.1rem !important;
-        font-weight: 800 !important;
+    .saas-hero-banner::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle at 50% 0%, rgba(116,209,22,0.2) 0%, transparent 55%);
+        pointer-events: none;
+    }
+    .hero-tagline-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        background: rgba(255,255,255,0.12);
+        border: 1.5px solid rgba(255,255,255,0.35);
+        color: #D9F99D;
+        padding: 0.38rem 1.1rem;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 0.85rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    }
+    .hero-pulse-dot {
+        width: 8px;
+        height: 8px;
+        background: #86EFAC;
+        border-radius: 50%;
+        box-shadow: 0 0 10px #86EFAC;
+        display: inline-block;
+        animation: heroPulse 1.8s infinite ease-in-out;
+    }
+    @keyframes heroPulse {
+        0%, 100% { transform: scale(0.9); opacity: 0.75; }
+        50% { transform: scale(1.35); opacity: 1; box-shadow: 0 0 16px #86EFAC; }
+    }
+    .hero-title-text {
+        font-size: 2.35rem !important;
+        font-weight: 900 !important;
         color: #FFFFFF !important;
         margin: 0 !important;
-        letter-spacing: -0.025em !important;
+        letter-spacing: -0.03em !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 0.65rem !important;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.12) !important;
+        gap: 0.75rem !important;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
     }
-    .header-subtitle-text {
-        font-size: 1rem !important;
-        color: #E0F2FE !important;
-        margin: 0.4rem 0 0 0 !important;
-        font-weight: 600 !important;
-        opacity: 0.98 !important;
+    .neon-highlight {
+        color: #BBF7D0 !important;
+    }
+    .hero-subtitle-text {
+        font-size: 1.05rem !important;
+        color: #BBF7D0 !important;
+        margin: 0.55rem 0 0.85rem 0 !important;
+        font-weight: 500 !important;
+        opacity: 0.9 !important;
         letter-spacing: 0.015em !important;
     }
+    .hero-chip-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.65rem;
+        flex-wrap: wrap;
+        margin-top: 0.85rem;
+    }
+    .hero-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: rgba(255,255,255,0.15);
+        border: 1.5px solid rgba(255,255,255,0.3);
+        color: #F0FDF4;
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 0.32rem 0.85rem;
+        border-radius: 9999px;
+        backdrop-filter: blur(4px);
+    }
 
-    /* ── Glass-Effect Modern Cards (Equal Height, Rounded 18px, Soft Shadows) ── */
+    /* ── 3. CLEAN PANEL DESIGN — Equal size cards, no nested box feel ── */
     div[data-testid="stHorizontalBlock"] {
         align-items: stretch !important;
+        gap: 1rem !important;
     }
+    /* Equal-height columns */
     div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
         display: flex !important;
         flex-direction: column !important;
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
     }
-    div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] > div[data-testid="stVerticalBlockBorderWrapper"],
-    .voice-control-panel,
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > .clinical-evidence-card) {
-        background: rgba(255, 255, 255, 0.95) !important;
-        backdrop-filter: blur(14px) !important;
-        -webkit-backdrop-filter: blur(14px) !important;
+
+    /* TOP-LEVEL column cards: full height, equal, green top border */
+    html body [data-testid="stAppViewContainer"] [data-testid="stColumn"] > div:first-child,
+    html body [data-testid="stAppViewContainer"] div[data-testid="stVerticalBlockBorderWrapper"] {
+        background: #FFFFFF !important;
         border-radius: 18px !important;
-        border: 1.5px solid rgba(186, 230, 253, 0.8) !important;
-        box-shadow: 0 4px 20px -2px rgba(14, 165, 233, 0.08), 0 2px 8px -1px rgba(15, 23, 42, 0.04) !important;
-        padding: 0.95rem 1.15rem !important;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        border: 2px solid #D9F99D !important;
+        border-top: 4px solid #74D116 !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+        padding: 1.1rem 1.2rem 1.2rem 1.2rem !important;
+        transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
         display: flex !important;
         flex-direction: column !important;
-        flex: 1 1 100% !important;
-        height: 100% !important;
-        min-height: 205px !important;
+        flex: 1 1 auto !important;
         box-sizing: border-box !important;
+        width: 100% !important;
     }
-    div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] > div[data-testid="stVerticalBlockBorderWrapper"]:hover,
-    .voice-control-panel:hover {
-        box-shadow: 0 10px 30px -4px rgba(14, 165, 233, 0.22), 0 0 16px rgba(20, 184, 166, 0.18) !important;
+
+    html body [data-testid="stAppViewContainer"] [data-testid="stColumn"] > div:first-child:hover,
+    html body [data-testid="stAppViewContainer"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        background: #F7FEE7 !important;
+        background-color: #F7FEE7 !important;
+        border-color: #84CC16 !important;
+        border-top-color: #4D9C00 !important;
+        box-shadow: 0 10px 30px rgba(116,209,22,0.22), 0 2px 10px rgba(0,0,0,0.07) !important;
         transform: translateY(-2px) !important;
-        border-color: #0EA5E9 !important;
     }
-    div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] > div[data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlock"] {
-        display: flex !important;
-        flex-direction: column !important;
-        flex: 1 1 100% !important;
-        height: 100% !important;
-        justify-content: flex-start !important;
+
+    /* Flatten all inner nested containers — no box-in-box */
+    html body [data-testid="stAppViewContainer"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
+    html body [data-testid="stAppViewContainer"] [data-testid="stColumn"] > div:first-child div[data-testid="stVerticalBlock"] {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        flex: unset !important;
     }
+
+
 
     /* Column Headers */
     .col-header {
-        font-size: 1.02rem;
-        font-weight: 700;
-        color: #0369A1;
-        margin-bottom: 0.65rem;
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-    }
-
-    /* ── Status Pill Badges (Modern Enterprise Healthcare) ── */
-    .pill-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
-        font-size: 0.84rem;
-        font-weight: 700;
-        padding: 0.4rem 0.9rem;
-        border-radius: 9999px;
-        white-space: nowrap;
-        margin-top: 0.35rem;
-        transition: all 0.2s ease-in-out;
-        backdrop-filter: blur(8px);
-    }
-    .pill-green {
-        background-color: rgba(236, 253, 245, 0.95) !important;
-        color: #059669 !important;
-        border: 1.5px solid #6EE7B7 !important;
-        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15) !important;
-    }
-    .pill-teal {
-        background-color: rgba(240, 253, 250, 0.95) !important;
-        color: #0D9488 !important;
-        border: 1.5px solid #5EEAD4 !important;
-        box-shadow: 0 2px 8px rgba(20, 184, 166, 0.16) !important;
-    }
-    .pill-model, .pill-blue {
-        background-color: rgba(240, 249, 255, 0.95) !important;
-        color: #0284C7 !important;
-        border: 1.5px solid #BAE6FD !important;
-        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.14) !important;
-    }
-    .pill-yellow {
-        background-color: rgba(254, 243, 199, 0.95) !important;
-        color: #92400E !important;
-        border: 1.5px solid #FDE68A !important;
-    }
-    .pill-red {
-        background-color: rgba(254, 226, 226, 0.95) !important;
-        color: #991B1B !important;
-        border: 1.5px solid #FECACA !important;
-    }
-    .pill-file {
-        background-color: #F0F9FF !important;
-        color: #0284C7 !important;
-        border: 1px solid #BAE6FD !important;
-        box-shadow: 0 2px 6px rgba(14, 165, 233, 0.08) !important;
-        font-size: 0.8rem !important;
-    }
-    .status-caption {
-        font-size: 0.78rem;
-        color: #64748B;
-        margin-top: 0.35rem;
-        font-weight: 500;
-    }
-
-    /* ── Premium Patient Badge (Healthcare Blue + Teal Pill) ── */
-    .patient-pill-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.55rem;
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 253, 250, 0.95) 100%);
-        border: 1.5px solid #14B8A6;
-        border-radius: 9999px;
-        padding: 0.5rem 1.35rem;
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: #0F766E;
-        box-shadow: 0 4px 18px rgba(20, 184, 166, 0.16), 0 1px 3px rgba(0, 0, 0, 0.04);
-        margin-bottom: 0.85rem;
-        backdrop-filter: blur(10px);
-        transition: all 0.25s ease;
-    }
-    .patient-pill-badge:hover {
-        border-color: #0EA5E9;
-        color: #0369A1;
-        transform: translateY(-1.5px);
-        box-shadow: 0 6px 22px rgba(14, 165, 233, 0.22);
-    }
-
-    /* ── Grounded Response Badge ── */
-    .grounded-badge-container {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.55rem;
-        background: #F0FDF4;
-        border: 1.5px solid #86EFAC;
-        border-radius: 9999px;
-        padding: 0.35rem 0.95rem;
-        margin-top: 0.35rem;
-        margin-bottom: 0.65rem;
-        box-shadow: 0 2px 8px rgba(34, 197, 94, 0.08);
-    }
-    .grounded-pill {
-        font-size: 0.82rem;
-        font-weight: 700;
-        color: #15803D;
-        display: flex;
-        align-items: center;
-        gap: 0.3rem;
-    }
-    .grounded-subtext {
-        font-size: 0.78rem;
-        color: #0369A1;
-        font-weight: 600;
-        padding-left: 0.45rem;
-        border-left: 1.5px solid #86EFAC;
-    }
-
-    /* ── Suggested Questions Section ── */
-    .suggested-q-card {
-        background-color: #FFFFFF !important;
-        border: 1.5px solid #BAE6FD !important;
-        border-radius: 18px !important;
-        padding: 0.85rem 1.15rem !important;
-        margin-top: 0.65rem !important;
-        margin-bottom: 0.85rem !important;
-        box-shadow: 0 4px 14px rgba(14, 165, 233, 0.06) !important;
-    }
-    .suggested-q-title {
-        font-size: 0.95rem !important;
-        font-weight: 700 !important;
-        color: #0369A1 !important;
-        margin-top: 0.75rem !important;
-        margin-bottom: 0.55rem !important;
+        font-size: 1.05rem !important;
+        font-weight: 900 !important;
+        color: #0D0D0D !important;
+        margin-bottom: 0.75rem !important;
         display: flex !important;
         align-items: center !important;
         gap: 0.45rem !important;
+        letter-spacing: -0.01em !important;
     }
-    div[data-testid="stColumn"] div:has(> button[key*="sq_btn_"]) button,
-    button[key*="sq_btn_"] {
-        background: linear-gradient(135deg, rgba(240, 249, 255, 0.95) 0%, rgba(224, 242, 254, 0.85) 100%) !important;
-        border: 1.5px solid #BAE6FD !important;
-        color: #0284C7 !important;
+
+    /* ── 4. STATUS BADGES — Modern Light Mint & Lime Theme matching UI flow ── */
+    .product-badge-stack {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+        margin-top: 0.35rem !important;
+    }
+
+    .product-badge {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        background: linear-gradient(135deg, #F0FDF4 0%, #ECFCCB 100%) !important;
+        background-color: #F7FEE7 !important;
+        border: 1.5px solid #84CC16 !important;
         border-radius: 9999px !important;
+        padding: 0.45rem 0.95rem !important;
+        font-size: 0.82rem !important;
         font-weight: 700 !important;
-        font-size: 0.85rem !important;
-        padding: 0.42rem 0.85rem !important;
-        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.08) !important;
-        transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        color: #14532D !important;
+        box-shadow: 0 2px 8px rgba(132, 204, 22, 0.16), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    .product-badge:hover {
+        transform: translateY(-1.5px) !important;
+        box-shadow: 0 4px 14px rgba(132, 204, 22, 0.3) !important;
+        border-color: #65A30D !important;
+    }
+
+    .product-badge-label {
+        color: #166534 !important;
+        font-weight: 700 !important;
+        font-size: 0.82rem !important;
+        margin-left: 0.4rem !important;
+        margin-right: auto !important;
+    }
+
+    .product-badge-state {
+        color: #15803D !important;
+        font-weight: 800 !important;
+        font-size: 0.82rem !important;
+        letter-spacing: 0.01em !important;
+    }
+
+    .product-badge.badge-pending {
+        background: linear-gradient(135deg, #F0FDF4 0%, #ECFCCB 100%) !important;
+        background-color: #F7FEE7 !important;
+        border-color: #84CC16 !important;
+        box-shadow: 0 2px 8px rgba(132, 204, 22, 0.16), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+    }
+    .product-badge.badge-pending .product-badge-label {
+        color: #166534 !important;
+    }
+    .product-badge.badge-pending .product-badge-state {
+        color: #15803D !important;
+    }
+
+    .product-badge.badge-offline {
+        background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%) !important;
+        background-color: #FEF2F2 !important;
+        border-color: #F87171 !important;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.18), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+    }
+    .product-badge.badge-offline .product-badge-label {
+        color: #991B1B !important;
+    }
+    .product-badge.badge-offline .product-badge-state {
+        color: #DC2626 !important;
+    }
+
+    .badge-dot {
+        width: 8px;
+        height: 8px;
+        background-color: #16A34A;
+        border-radius: 50%;
+        box-shadow: 0 0 6px rgba(22, 163, 74, 0.7);
+        display: inline-block;
+        flex-shrink: 0;
+        animation: badgePulse 2s infinite ease-in-out;
+    }
+    @keyframes badgePulse {
+        0%, 100% { transform: scale(0.95); opacity: 0.85; }
+        50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 10px rgba(22, 163, 74, 0.9); }
+    }
+    .dot-amber {
+        background-color: #16A34A !important;
+        box-shadow: 0 0 6px rgba(22, 163, 74, 0.7) !important;
+    }
+    .dot-red {
+        background-color: #EF4444 !important;
+        box-shadow: 0 0 6px rgba(239, 68, 68, 0.7) !important;
+    }
+
+    .pill-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        font-weight: 700;
+        padding: 0.45rem 1.05rem;
+        border-radius: 9999px;
+        white-space: nowrap;
+        margin-top: 0.4rem;
+        background: linear-gradient(135deg, #F0FDF4 0%, #ECFCCB 100%) !important;
+        background-color: #F7FEE7 !important;
+        color: #14532D !important;
+        border: 1.5px solid #84CC16 !important;
+        box-shadow: 0 2px 8px rgba(132, 204, 22, 0.16) !important;
+    }
+    .pill-file {
+        background: linear-gradient(135deg, #F0FDF4 0%, #ECFCCB 100%) !important;
+        background-color: #F7FEE7 !important;
+        color: #14532D !important;
+        border: 1.5px solid #84CC16 !important;
+        border-radius: 9999px !important;
+        box-shadow: 0 2px 8px rgba(132, 204, 22, 0.16) !important;
+        font-size: 0.84rem !important;
+        padding: 0.4rem 0.95rem !important;
+    }
+    .status-caption {
+        font-size: 0.78rem;
+        color: #4B5563;
+        margin-top: 0.4rem;
+        font-weight: 600;
+    }
+
+    /* ── 5. SUGGESTED QUESTIONS TITLE ── */
+    .suggested-q-title {
+        font-size: 1.05rem !important;
+        font-weight: 800 !important;
+        color: #0284C7 !important;
+        margin-top: 1.25rem !important;
+        margin-bottom: 0.65rem !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+    }
+
+    /* ── SUGGESTED QUESTIONS CHIPS (Exact Reference Match: White Rounded Cards) ── */
+    button[key*="chip_q_"],
+    div[class*="st-key-chip_q_"] button {
+        background: #FFFFFF !important;
+        background-color: #FFFFFF !important;
+        border: 1.5px solid #E2E8F0 !important;
+        border-radius: 12px !important;
+        color: #1E293B !important;
+        font-weight: 600 !important;
+        font-size: 0.88rem !important;
+        padding: 0.5rem 0.75rem !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        transition: all 0.15s ease !important;
+        min-height: 42px !important;
+        height: 42px !important;
         white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
+        cursor: pointer !important;
         width: 100% !important;
+    }
+    button[key*="chip_q_"] *,
+    div[class*="st-key-chip_q_"] button * {
+        color: #1E293B !important;
+        font-weight: 600 !important;
+    }
+    button[key*="chip_q_"]:hover,
+    div[class*="st-key-chip_q_"] button:hover {
+        background: #ECFCCB !important;
+        background-color: #ECFCCB !important;
+        border-color: #74D116 !important;
+        box-shadow: 0 4px 14px rgba(116, 209, 22, 0.25) !important;
+        transform: translateY(-2px) !important;
+    }
+    button[key*="chip_q_"]:hover *,
+    div[class*="st-key-chip_q_"] button:hover * {
+        color: #14532D !important;
+        font-weight: 700 !important;
+    }
+
+    /* ── RECENT QUESTIONS SECTION & ASK BUTTONS ── */
+    .recent-q-item {
+        font-size: 0.95rem !important;
+        font-weight: 700 !important;
+        color: #111827 !important;
+        display: flex !important;
+        align-items: center !important;
+        min-height: 40px !important;
+        height: 40px !important;
+        line-height: 40px !important;
+    }
+
+    /* Reset column borders inside the expander */
+    div[data-testid="stExpander"] [data-testid="stColumn"] > div:first-child {
+        background: transparent !important;
+        border: none !important;
+        border-top: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+
+    /* Ask ↗ Button styling inside Recent Questions */
+    div[data-testid="stExpander"] button,
+    div[class*="st-key-ask_rq_"] button,
+    button[key*="ask_rq_"] {
+        background: linear-gradient(135deg, #f0fde4 0%, #e8fad4 100%) !important;
+        background-color: #f0fde4 !important;
+        border: 2px solid #74D116 !important;
+        border-radius: 9999px !important;
+        color: #14532D !important;
+        font-weight: 800 !important;
+        font-size: 0.92rem !important;
         min-height: 38px !important;
         height: 38px !important;
+        padding: 0 1.25rem !important;
+        box-shadow: 0 2px 8px rgba(116, 209, 22, 0.2) !important;
+        transition: all 0.18s ease !important;
+        cursor: pointer !important;
+        width: 100% !important;
     }
-    div[data-testid="stColumn"] div:has(> button[key*="sq_btn_"]) button:hover,
-    button[key*="sq_btn_"]:hover {
-        background: linear-gradient(135deg, #0EA5E9 0%, #14B8A6 100%) !important;
-        border-color: #0EA5E9 !important;
+
+    /* Force text color to deep dark green #14532D so it is 100% visible */
+    div[data-testid="stExpander"] button *,
+    div[data-testid="stExpander"] button p,
+    div[data-testid="stExpander"] button span,
+    div[class*="st-key-ask_rq_"] button *,
+    div[class*="st-key-ask_rq_"] button p,
+    div[class*="st-key-ask_rq_"] button span,
+    button[key*="ask_rq_"] *,
+    button[key*="ask_rq_"] p,
+    button[key*="ask_rq_"] span {
+        color: #14532D !important;
+        font-weight: 800 !important;
+        font-size: 0.92rem !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+
+    div[data-testid="stExpander"] button:hover,
+    div[class*="st-key-ask_rq_"] button:hover,
+    button[key*="ask_rq_"]:hover {
+        background: #74D116 !important;
+        background-color: #74D116 !important;
+        border-color: #4D9C00 !important;
         color: #FFFFFF !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 18px rgba(14, 165, 233, 0.28) !important;
+        box-shadow: 0 4px 14px rgba(116, 209, 22, 0.45) !important;
+        transform: translateY(-1px) !important;
     }
 
-    /* ── Recent Questions ── */
-    .recent-q-item {
-        font-size: 0.86rem !important;
-        color: #334155 !important;
-        font-weight: 500 !important;
-        padding: 0.25rem 0 !important;
+    div[data-testid="stExpander"] button:hover *,
+    div[data-testid="stExpander"] button:hover p,
+    div[data-testid="stExpander"] button:hover span,
+    div[class*="st-key-ask_rq_"] button:hover *,
+    div[class*="st-key-ask_rq_"] button:hover p,
+    div[class*="st-key-ask_rq_"] button:hover span,
+    button[key*="ask_rq_"]:hover * {
+        color: #FFFFFF !important;
     }
 
-    /* ── Download PDF Button ── */
-    .stDownloadButton > button {
-        background: #FFFFFF !important;
-        border: 1.5px solid #2563EB !important;
-        color: #2563EB !important;
-        border-radius: 12px !important;
+    /* ── GENERAL SECONDARY BUTTONS ── */
+    [data-testid="stBaseButton-secondary"]:not([key*="chip_q_"]):not([key*="ask_rq_"]),
+    [data-testid="baseButton-secondary"]:not([key*="chip_q_"]):not([key*="ask_rq_"]),
+    .stButton > button[data-testid="stBaseButton-secondary"]:not([key*="chip_q_"]):not([key*="ask_rq_"]),
+    .stButton > button[data-testid="baseButton-secondary"]:not([key*="chip_q_"]):not([key*="ask_rq_"]) {
+        background: linear-gradient(135deg, #f0fde4 0%, #e8fad4 100%) !important;
+        border: 2px solid #74D116 !important;
+        border-radius: 9999px !important;
+        color: #1a5c00 !important;
         font-weight: 700 !important;
-        font-size: 0.86rem !important;
-        padding: 0.45rem 1.1rem !important;
-        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12) !important;
-        transition: all 0.2s ease-in-out !important;
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.5rem !important;
+        font-size: 0.87rem !important;
+        padding: 0.5rem 0.9rem !important;
+        box-shadow: 0 2px 8px rgba(116,209,22,0.2) !important;
+        transition: all 0.18s ease !important;
+        min-height: 38px !important;
+        height: auto !important;
+        white-space: normal !important;
+        cursor: pointer !important;
+        width: 100% !important;
     }
-    .stDownloadButton > button:hover {
-        background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 100%) !important;
+
+    [data-testid="stBaseButton-secondary"]:not([key*="chip_q_"]):not([key*="ask_rq_"]):hover,
+    [data-testid="baseButton-secondary"]:not([key*="chip_q_"]):not([key*="ask_rq_"]):hover,
+    .stButton > button[data-testid="stBaseButton-secondary"]:not([key*="chip_q_"]):not([key*="ask_rq_"]):hover,
+    .stButton > button[data-testid="baseButton-secondary"]:not([key*="chip_q_"]):not([key*="ask_rq_"]):hover,
+    div[data-testid="stDownloadButton"] button:hover {
+        background: #74D116 !important;
+        background-color: #74D116 !important;
+        border-color: #4D9C00 !important;
         color: #FFFFFF !important;
-        border-color: #2563EB !important;
+        box-shadow: 0 4px 16px rgba(116, 209, 22, 0.4) !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28) !important;
+    }
+    [data-testid="stBaseButton-secondary"]:not([key*="chip_q_"]):not([key*="ask_rq_"]):hover *,
+    [data-testid="baseButton-secondary"]:not([key*="chip_q_"]):not([key*="ask_rq_"]):hover *,
+    .stButton > button[data-testid="stBaseButton-secondary"]:not([key*="chip_q_"]):not([key*="ask_rq_"]):hover *,
+    .stButton > button[data-testid="baseButton-secondary"]:not([key*="chip_q_"]):not([key*="ask_rq_"]):hover *,
+    div[data-testid="stDownloadButton"] button:hover * {
+        color: #FFFFFF !important;
     }
 
-    /* ── Upload Area (Dashed Sky Blue border, rounded 18px) ── */
-    div[data-testid="stFileUploader"] {
-        margin-bottom: 0.35rem !important;
-    }
-    div[data-testid="stFileUploader"] section {
-        background-color: #F8FCFF !important;
-        border: 2px dashed #7DD3FC !important;
-        border-radius: 18px !important;
-        padding: 0.65rem 0.9rem !important;
-        transition: all 0.25s ease-in-out !important;
-    }
-    div[data-testid="stFileUploader"] section:hover {
-        border-color: #38BDF8 !important;
-        background-color: #F0F9FF !important;
-        box-shadow: 0 0 16px rgba(56, 189, 248, 0.22) !important;
-    }
-    div[data-testid="stFileUploader"] section [data-testid="stMarkdownContainer"] p {
-        color: #0369A1 !important;
-        font-weight: 600 !important;
-        font-size: 0.85rem !important;
-        margin: 0 !important;
-    }
-    div[data-testid="stFileUploader"] section small {
-        display: none !important;
-    }
-    div[data-testid="stFileUploader"] button {
-        background-color: #FFFFFF !important;
-        border: 1px solid #BAE6FD !important;
-        color: #0284C7 !important;
-        border-radius: 12px !important;
-        font-weight: 600 !important;
-    }
 
-    /* Modern Primary Buttons (Healthcare Blue + Teal Gradient) */
-    .stButton > button {
-        background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 55%, #14B8A6 100%) !important;
+
+    /* ── 6. PRIMARY BUTTON (Vibrant Lime Green #74D116 as in reference "Swap" button) ── */
+    html body [data-testid="stAppViewContainer"] button[kind="primary"],
+    html body [data-testid="stAppViewContainer"] button[data-testid="baseButton-primary"],
+    html body [data-testid="stAppViewContainer"] button[data-testid="stBaseButton-primary"],
+    html body [data-testid="stAppViewContainer"] .stButton > button[kind="primary"],
+    html body [data-testid="stAppViewContainer"] div[class*="st-key-btn_process"] button {
+        background: #74D116 !important;
+        background-color: #74D116 !important;
         color: #FFFFFF !important;
         border: none !important;
-        border-radius: 14px !important;
-        font-weight: 700 !important;
-        font-size: 0.9rem !important;
-        padding: 0.55rem 1.3rem !important;
-        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.25) !important;
+        border-radius: 12px !important;
+        font-weight: 800 !important;
+        font-size: 1rem !important;
+        padding: 0.75rem 1.5rem !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25) !important;
+        letter-spacing: 0.02em !important;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
         margin-top: 0.35rem !important;
     }
-    .stButton > button:hover {
-        background: linear-gradient(135deg, #1D4ED8 0%, #0284C7 55%, #0D9488 100%) !important;
-        box-shadow: 0 8px 24px rgba(14, 165, 233, 0.38) !important;
+    html body [data-testid="stAppViewContainer"] button[kind="primary"] *,
+    html body [data-testid="stAppViewContainer"] button[kind="primary"] p {
+        color: #FFFFFF !important;
+        font-weight: 800 !important;
+    }
+    html body [data-testid="stAppViewContainer"] button[kind="primary"]:hover {
+        background: #62B80E !important;
+        background-color: #62B80E !important;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35) !important;
         transform: translateY(-2px) !important;
         color: #FFFFFF !important;
     }
 
     /* Uploaded File Delete 'X' Button */
-    div[data-testid="stColumn"] div:has(> button[key*="remove_"]) button,
-    button[key*="remove_"] {
+    button[key*="remove_"],
+    div[class*="st-key-remove_"] button {
         background-color: #FEE2E2 !important;
         color: #DC2626 !important;
         border: 1px solid #FECACA !important;
@@ -554,324 +728,626 @@ st.markdown("""
         line-height: 1 !important;
         transition: all 0.15s ease !important;
     }
-    div[data-testid="stColumn"] div:has(> button[key*="remove_"]) button:hover,
-    button[key*="remove_"]:hover {
+    button[key*="remove_"] *,
+    div[class*="st-key-remove_"] button * {
+        color: #DC2626 !important;
+    }
+    button[key*="remove_"]:hover,
+    div[class*="st-key-remove_"] button:hover {
         background-color: #EF4444 !important;
         color: #FFFFFF !important;
         border-color: #DC2626 !important;
     }
-
-    /* Selectbox */
-    div[data-testid="stSelectbox"] > div {
-        border-radius: 12px !important;
-        border-color: #BAE6FD !important;
+    button[key*="remove_"]:hover *,
+    div[class*="st-key-remove_"] button:hover * {
+        color: #FFFFFF !important;
     }
-    div[data-testid="stSelectbox"] > div:hover {
-        border-color: #38BDF8 !important;
+
+    /* ── Hide ALL tooltips, help icons and popup boxes ── */
+    button[data-testid="stTooltipIcon"],
+    [data-testid="stTooltipHoverTarget"],
+    .stTooltipIcon,
+    [data-testid="stWidgetLabel"] button,
+    label + div > svg,
+    div[data-testid="stTooltipIcon"],
+    [data-testid="stTooltip"],
+    [role="tooltip"],
+    div[class*="tooltip"],
+    div[class*="Tooltip"],
+    [data-baseweb="tooltip"],
+    [data-baseweb="popover"] {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        max-width: 0 !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* ── Selectbox: Clean green border, zero arc artifact ── */
+    div[data-testid="stSelectbox"] { width: 100% !important; }
+
+    /* Outer wrapper: rounded green border, clips inner content */
+    div[data-testid="stSelectbox"] > div:last-child {
+        border: 2px solid #74D116 !important;
+        border-radius: 10px !important;
+        background: #FFFFFF !important;
+        overflow: hidden !important;
+        box-shadow: none !important;
+        padding: 2px !important;
+        cursor: pointer !important;
+        transition: all 0.22s ease !important;
+    }
+    div[data-testid="stSelectbox"] > div:last-child:hover,
+    div[data-testid="stSelectbox"] > div:last-child:focus-within {
+        background: #ECFCCB !important;
+        background-color: #ECFCCB !important;
+        border-color: #4D9C00 !important;
+        box-shadow: 0 0 0 3px rgba(116,209,22,0.25), 0 4px 12px rgba(116,209,22,0.15) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    /* Kill ALL inner borders — every layer — so no arc can appear */
+    div[data-testid="stSelectbox"] [data-baseweb="select"],
+    div[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+    div[data-testid="stSelectbox"] [data-baseweb="select"] > div > div,
+    div[data-testid="stSelectbox"] [data-baseweb="select"] > div > div > div,
+    div[data-testid="stSelectbox"] [data-baseweb="select"] input,
+    div[data-testid="stSelectbox"] > div > div,
+    div[data-testid="stSelectbox"] > div > div > div,
+    div[data-testid="stSelectbox"] > div > div > div > div,
+    div[data-testid="stSelectbox"] > div > div > div > div > div {
+        border: none !important;
+        border-color: transparent !important;
+        border-width: 0 !important;
+        outline: none !important;
+        box-shadow: none !important;
+        border-radius: 8px !important;
+        background: transparent !important;
+    }
+
+    /* Dropdown menu options hover */
+    ul[data-baseweb="menu"] li:hover,
+    li[role="option"]:hover,
+    li[role="option"][aria-selected="true"] {
+        background-color: #D9F99D !important;
+        color: #14532D !important;
+        font-weight: 700 !important;
+    }
+
+    /* ── Toggle Switch Hover & Clickable Styling (Translate Responses & Voice Assistant Mode) ── */
+    div[data-testid="stToggle"] {
+        cursor: pointer !important;
+        padding: 0.45rem 0.75rem !important;
+        border-radius: 14px !important;
+        border: 1.5px solid transparent !important;
+        transition: all 0.22s ease !important;
+    }
+    div[data-testid="stToggle"]:hover {
+        background-color: #ECFCCB !important;
+        background: #ECFCCB !important;
+        border-color: #84CC16 !important;
+        box-shadow: 0 4px 12px rgba(116, 209, 22, 0.2) !important;
+        transform: translateY(-1px) !important;
+    }
+    div[data-testid="stToggle"] label,
+    div[data-testid="stToggle"] label * {
+        cursor: pointer !important;
+    }
+    div[data-testid="stToggle"]:hover label p,
+    div[data-testid="stToggle"]:hover label span {
+        color: #14532D !important;
+        font-weight: 700 !important;
+    }
+    /* Toggle active track green */
+    div[data-testid="stToggle"] input:checked ~ div[class*="StyledTrack"],
+    div[data-testid="stToggle"] input:checked + div,
+    div[data-testid="stToggle"] [data-baseweb="checkbox"] [aria-checked="true"] {
+        background-color: #74D116 !important;
+    }
+
+    /* ── Expander Summary Header Hover ── */
+    div[data-testid="stExpander"] details summary {
+        border-radius: 12px !important;
+        padding: 0.5rem 0.85rem !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
+    }
+    div[data-testid="stExpander"] details summary:hover {
+        background-color: #ECFCCB !important;
+        background: #ECFCCB !important;
+        color: #14532D !important;
+    }
+    div[data-testid="stExpander"] details summary:hover * {
+        color: #14532D !important;
+    }
+
+    /* ── File Uploader Dropzone Hover ── */
+    [data-testid="stFileUploaderDropzone"] {
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        border-radius: 14px !important;
+    }
+    [data-testid="stFileUploaderDropzone"]:hover {
+        background-color: #ECFCCB !important;
+        background: #ECFCCB !important;
+        border-color: #74D116 !important;
+        box-shadow: 0 4px 14px rgba(116, 209, 22, 0.18) !important;
+    }
+    [data-testid="stFileUploaderDropzone"] button {
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+    }
+    [data-testid="stFileUploaderDropzone"] button:hover {
+        background-color: #74D116 !important;
+        background: #74D116 !important;
+        color: #FFFFFF !important;
+    }
+    [data-testid="stFileUploaderDropzone"] button:hover * {
+        color: #FFFFFF !important;
     }
 
     /* Horizontal Divider */
     hr {
-        margin: 1.15rem 0 !important;
-        border-color: #BAE6FD !important;
+        margin: 1.25rem 0 !important;
+        border: none !important;
+        border-top: 2px solid #74D116 !important;
     }
 
-    /* ── Multilingual & Voice Assistant Styling ── */
-    .voice-control-panel {
-        background-color: #FFFFFF !important;
-        border: 1.5px solid #BAE6FD !important;
-        border-radius: 18px !important;
-        padding: 0.95rem 1.25rem !important;
-        box-shadow: 0 4px 18px -2px rgba(14, 165, 233, 0.08) !important;
-        margin-bottom: 0.85rem !important;
-        transition: all 0.25s ease !important;
-    }
-    .voice-control-panel:hover {
-        border-color: #38BDF8 !important;
-        box-shadow: 0 8px 24px -2px rgba(14, 165, 233, 0.14) !important;
-    }
-    .voice-badge-active {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        background: #F0FDF4;
-        border: 1.5px solid #86EFAC;
-        border-radius: 9999px;
-        padding: 0.35rem 0.85rem;
-        font-size: 0.82rem;
-        font-weight: 700;
-        color: #15803D;
-        box-shadow: 0 2px 8px rgba(74, 222, 128, 0.15);
-    }
+    /* ── Voice Assistant Styling ── */
     div[data-testid="stAudioInput"] {
-        background-color: #F8FCFF !important;
-        border: 1.5px solid #BAE6FD !important;
+        background-color: #FFFFFF !important;
+        border: 2px solid #D9F99D !important;
         border-radius: 16px !important;
         padding: 0.45rem 0.85rem !important;
-        transition: all 0.2s ease !important;
+        transition: all 0.22s ease !important;
+        cursor: pointer !important;
     }
     div[data-testid="stAudioInput"]:hover {
-        border-color: #38BDF8 !important;
-        box-shadow: 0 4px 14px rgba(14, 165, 233, 0.12) !important;
-    }
-    .listen-btn-container button {
-        background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%) !important;
-        color: #FFFFFF !important;
-        border-radius: 12px !important;
-        font-weight: 700 !important;
-        font-size: 0.86rem !important;
-        border: none !important;
-        box-shadow: 0 3px 10px rgba(14, 165, 233, 0.22) !important;
-        transition: all 0.2s ease !important;
-    }
-    .listen-btn-container button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 16px rgba(14, 165, 233, 0.35) !important;
+        background-color: #F7FEE7 !important;
+        background: #F7FEE7 !important;
+        border-color: #84CC16 !important;
+        box-shadow: 0 4px 16px rgba(132, 204, 22, 0.22) !important;
+        transform: translateY(-1px) !important;
     }
 
-    /* ── Smooth Answer Reveal Animation & Pulse Typing ── */
-    @keyframes smoothAnswerReveal {
-        0% {
-            opacity: 0;
-            transform: translateY(12px);
-        }
-        100% {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    @keyframes pulseTyping {
-        0%, 100% { opacity: 0.75; transform: scale(0.997); }
-        50% { opacity: 1; transform: scale(1); }
-    }
-
-    /* Status Expander Box (Typing Indicator: Analyzing Patient Report...) */
-    div[data-testid="stStatusWidget"] {
-        border-radius: 18px !important;
-        border: 1.5px solid #BAE6FD !important;
-        background-color: #FFFFFF !important;
-        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.06) !important;
-        animation: pulseTyping 1.8s infinite ease-in-out !important;
-        margin-bottom: 0.75rem !important;
-    }
-
-    /* ── Chat Messages ── */
-    /* User Message Bubble */
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
-        flex-direction: row-reverse !important;
-        text-align: right !important;
+    /* ── 7. CHATBOT WIDGET — Reference Match: White Pill Input + Orange Circular Chatbot Button (#FE5100) ── */
+    div[data-testid="stBottom"] {
         background: transparent !important;
-        padding: 0.4rem 0 !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+        display: flex !important;
+        align-items: flex-end !important;
+        justify-content: flex-end !important;
+        padding: 0 1.5rem 1.25rem 0 !important;
+        pointer-events: none !important;
     }
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] {
-        background: linear-gradient(135deg, #1E40AF 0%, #2563EB 60%, #0EA5E9 100%) !important;
-        color: #FFFFFF !important;
-        border-radius: 20px 20px 4px 20px !important;
-        padding: 0.85rem 1.35rem !important;
-        box-shadow: 0 4px 16px rgba(37, 99, 235, 0.22) !important;
-        max-width: 80% !important;
+    div[data-testid="stBottom"]::before,
+    div[data-testid="stBottom"]::after,
+    div[data-testid="stBottom"] > div::before {
+        display: none !important;
+        background: transparent !important;
+    }
+
+    /* Container holding the white pill input on the left + the circular chatbot button on the right */
+    div[data-testid="stBottom"] > div {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        max-width: 440px !important;
+        width: 440px !important;
+        min-width: 0 !important;
+        flex-shrink: 0 !important;
         margin-left: auto !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        margin-right: 0 !important;
+        padding: 0 !important;
+        pointer-events: auto !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 12px !important;
     }
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] p {
-        color: #FFFFFF !important;
-        font-weight: 600 !important;
-        font-size: 0.95rem !important;
+
+    /* Floating circular chatbot assistant button (Complete Solid Green + Question mark symbol) */
+    div[data-testid="stBottom"] > div::after {
+        content: "" !important;
+        width: 48px !important;
+        height: 48px !important;
+        min-width: 48px !important;
+        min-height: 48px !important;
+        border-radius: 50% !important;
+        background-color: #74D116 !important;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3'/%3E%3Cline x1='12' y1='17' x2='12.01' y2='17' stroke-width='3.8'/%3E%3C/svg%3E") no-repeat center / 24px 24px,
+                    linear-gradient(135deg, #74D116 0%, #15803D 100%) !important;
+        box-shadow: 0 4px 16px rgba(22, 163, 74, 0.45), 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+        flex-shrink: 0 !important;
+        cursor: pointer !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+        display: block !important;
+    }
+    div[data-testid="stBottom"] > div::after:hover {
+        transform: scale(1.08) !important;
+        box-shadow: 0 6px 22px rgba(22, 163, 74, 0.65) !important;
+    }
+
+    /* Intermediate wrapper reset */
+    div[data-testid="stBottom"] > div > div,
+    div[data-testid="stChatInputContainer"] {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+    }
+
+    /* Outer stChatInput wrapper */
+    div[data-testid="stChatInput"] {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+    }
+
+    /* THE GREEN CAPSULE INPUT PILL */
+    div[data-testid="stChatInput"] > div {
+        background: #74D116 !important;
+        background-color: #74D116 !important;
+        border: 2px solid #5EA808 !important;
+        border-radius: 9999px !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        padding: 0 8px 0 20px !important;
+        box-shadow: 0 4px 16px rgba(116, 209, 22, 0.35), 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+        width: 100% !important;
+    }
+    div[data-testid="stChatInput"] > div:focus-within {
+        border-color: #3B7E00 !important;
+        box-shadow: 0 0 0 3px rgba(116, 209, 22, 0.45), 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    /* Strip all inner div layers completely — zero overlap */
+    div[data-testid="stChatInput"] > div div {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        border-color: transparent !important;
+        box-shadow: none !important;
+        outline: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        min-height: unset !important;
+    }
+
+    /* Inner row flex container */
+    div[data-testid="stChatInput"] [class*="e1p9v2yr3"],
+    div[data-testid="stChatInput"] [class*="e1p9v2yr4"] {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        height: 100% !important;
+    }
+
+    div[data-testid="stChatInput"] [class*="e1p9v2yr6"] {
+        display: flex !important;
+        align-items: center !important;
+        flex-shrink: 0 !important;
+        padding: 0 !important;
         margin: 0 !important;
     }
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="chatAvatarIcon-user"] {
-        background: #2563EB !important;
+
+    /* Solid black text styling inside the green pill */
+    div[data-testid="stChatInput"] textarea,
+    textarea[data-testid="stChatInputTextArea"] {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        border-color: transparent !important;
+        outline: none !important;
+        box-shadow: none !important;
+        font-size: 0.92rem !important;
+        font-weight: 600 !important;
+        color: #000000 !important;
+        caret-color: #000000 !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        height: 24px !important;
+        min-height: 24px !important;
+        max-height: 28px !important;
+        line-height: 24px !important;
+        resize: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        width: 100% !important;
+    }
+    div[data-testid="stChatInput"] textarea::placeholder,
+    textarea[data-testid="stChatInputTextArea"]::placeholder {
+        color: #000000 !important;
+        opacity: 0.8 !important;
+        font-size: 0.90rem !important;
+        font-weight: 600 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        line-height: 24px !important;
+    }
+
+    /* Crisp white circular send button with black arrow inside green pill */
+    div[data-testid="stChatInput"] button,
+    button[data-testid="stChatInputSubmitButton"],
+    div[data-testid="stChatInput"] > div button {
+        background: #FFFFFF !important;
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        border-radius: 50% !important;
+        border: none !important;
+        height: 34px !important;
+        width: 34px !important;
+        min-height: 34px !important;
+        min-width: 34px !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+        transition: all 0.15s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+        padding: 0 !important;
+        margin: 0 0 0 6px !important;
+        cursor: pointer !important;
+    }
+    div[data-testid="stChatInput"] button:hover,
+    button[data-testid="stChatInputSubmitButton"]:hover,
+    div[data-testid="stChatInput"] > div button:hover {
+        background: #050814 !important;
+        background-color: #050814 !important;
+        color: #FFFFFF !important;
+        transform: scale(1.08) !important;
+    }
+    div[data-testid="stChatInput"] button:hover svg,
+    button[data-testid="stChatInputSubmitButton"]:hover svg {
+        fill: #FFFFFF !important;
         color: #FFFFFF !important;
     }
 
-    /* Assistant Message Container */
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
-        background: transparent !important;
-        padding: 0.5rem 0 !important;
+    /* Native clean up arrow SVG in solid black */
+    div[data-testid="stChatInput"] button svg,
+    button[data-testid="stChatInputSubmitButton"] svg {
+        display: block !important;
+        fill: #000000 !important;
+        color: #000000 !important;
+        width: 17px !important;
+        height: 17px !important;
     }
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] {
-        background: transparent !important;
-        padding: 0 !important;
-        max-width: 100% !important;
-    }
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="chatAvatarIcon-assistant"] {
-        background: #E0F2FE !important;
-        color: #0284C7 !important;
-    }
-
-    /* ── Retrieved Patient Box ── */
-    .retrieved-patient-box {
-        background-color: #FFFFFF !important;
-        border: 1.5px solid #BAE6FD !important;
-        color: #0369A1 !important;
-        border-radius: 18px !important;
-        padding: 0.75rem 1.25rem !important;
-        font-weight: 700 !important;
-        margin-top: 0.35rem !important;
-        margin-bottom: 0.75rem !important;
-        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.08) !important;
-        font-size: 0.92rem !important;
-        animation: smoothAnswerReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-        transition: all 0.25s ease !important;
-    }
-    .retrieved-patient-box:hover {
-        border-color: #38BDF8 !important;
-        box-shadow: 0 6px 20px rgba(14, 165, 233, 0.12) !important;
-        transform: translateY(-2px) !important;
+    div[data-testid="stChatInput"] button::after,
+    button[data-testid="stChatInputSubmitButton"]::after {
+        display: none !important;
+        content: none !important;
     }
 
-    /* ── Answer Section & Cards (White Background, Light Blue Border, Rounded Corners 18px-20px, Soft Shadows) ── */
+
+
+    /* ── 8. ANSWER SECTION & CARDS (Pure White, 8px Green Left Border, Rounded 20px) ── */
+    @keyframes smoothAnswerReveal {
+        0% { opacity: 0; transform: translateY(14px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
     .answer-card-box {
+        background: #FFFFFF !important;
         background-color: #FFFFFF !important;
-        border: 1.5px solid #BAE6FD !important;
-        border-left: 5px solid #2563EB !important;
-        border-radius: 18px !important;
-        padding: 1.25rem 1.6rem !important;
-        margin-top: 0.5rem !important;
-        box-shadow: 0 4px 18px rgba(14, 165, 233, 0.08) !important;
-        color: #0F172A !important;
-        font-size: 0.95rem !important;
-        line-height: 1.65 !important;
+        border: 2px solid #D9F99D !important;
+        border-left: 8px solid #84CC16 !important;
+        border-radius: 20px !important;
+        padding: 1.6rem 2rem !important;
+        margin-top: 0.75rem !important;
+        margin-bottom: 1.15rem !important;
+        box-shadow: 0 16px 38px -4px rgba(5, 8, 20, 0.12), 0 4px 18px rgba(132, 204, 22, 0.2) !important;
+        color: #111827 !important;
+        font-size: 0.98rem !important;
+        line-height: 1.8 !important;
         white-space: pre-wrap !important;
         animation: smoothAnswerReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
         transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease !important;
     }
     .answer-card-box:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 26px rgba(14, 165, 233, 0.14) !important;
-        border-color: #38BDF8 !important;
+        transform: translateY(-3px) !important;
+        box-shadow: 0 22px 46px -4px rgba(5, 8, 20, 0.18), 0 6px 26px rgba(132, 204, 22, 0.32) !important;
+        border-color: #84CC16 !important;
     }
 
     /* Structured Section Cards */
     .section-card {
+        background: linear-gradient(180deg, #FFFFFF 0%, #F8FCF5 100%) !important;
         background-color: #FFFFFF !important;
-        border: 1.5px solid #BAE6FD !important;
-        border-radius: 18px !important;
-        padding: 1.15rem 1.5rem !important;
-        margin-bottom: 0.85rem !important;
-        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.07) !important;
+        border: 2px solid #D9F99D !important;
+        border-left: 8px solid #84CC16 !important;
+        border-radius: 20px !important;
+        padding: 1.55rem 2rem !important;
+        margin-bottom: 1.25rem !important;
+        box-shadow: 0 14px 34px -4px rgba(5, 8, 20, 0.1), 0 4px 18px rgba(132, 204, 22, 0.18) !important;
         transition: all 0.25s ease !important;
         animation: smoothAnswerReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
     }
     .section-card:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 24px rgba(14, 165, 233, 0.14) !important;
-        border-color: #38BDF8 !important;
+        transform: translateY(-3px) !important;
+        box-shadow: 0 20px 44px -4px rgba(5, 8, 20, 0.16), 0 6px 26px rgba(132, 204, 22, 0.3) !important;
+        border-color: #84CC16 !important;
     }
     .section-card-title {
-        font-size: 1rem !important;
-        font-weight: 700 !important;
-        color: #0369A1 !important;
-        margin-bottom: 0.45rem !important;
+        font-size: 1.15rem !important;
+        font-weight: 800 !important;
+        color: #14532D !important;
+        margin-bottom: 0.75rem !important;
         display: flex !important;
         align-items: center !important;
-        gap: 0.45rem !important;
+        gap: 0.6rem !important;
+        border-bottom: 2px dashed #D9F99D !important;
+        padding-bottom: 0.55rem !important;
+        letter-spacing: -0.01em !important;
     }
     .section-card-body {
-        font-size: 0.94rem !important;
-        color: #1E293B !important;
-        line-height: 1.65 !important;
+        font-size: 0.98rem !important;
+        color: #1F2937 !important;
+        line-height: 1.8 !important;
         white-space: pre-wrap !important;
     }
 
-    /* ── Clinical Evidence Card (Clean White, Rounded 18px, Blue Border) ── */
+    /* Clinical Evidence Card */
     .clinical-evidence-card {
         background-color: #FFFFFF !important;
-        border: 1.5px solid #BAE6FD !important;
-        border-radius: 18px !important;
-        box-shadow: 0 4px 18px -2px rgba(14, 165, 233, 0.08) !important;
-        padding: 1.35rem 1.7rem !important;
-        color: #0F172A !important;
+        border: 2px solid #D9F99D !important;
+        border-left: 8px solid #84CC16 !important;
+        border-radius: 20px !important;
+        box-shadow: 0 14px 34px -4px rgba(5, 8, 20, 0.1), 0 4px 18px rgba(132, 204, 22, 0.18) !important;
+        padding: 1.55rem 1.95rem !important;
+        color: #111827 !important;
         font-family: 'Plus Jakarta Sans', sans-serif !important;
         transition: all 0.25s ease !important;
         animation: smoothAnswerReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
     }
-    .clinical-evidence-card:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 24px -2px rgba(14, 165, 233, 0.14) !important;
-        border-color: #38BDF8 !important;
-    }
     .evidence-header-label {
-        font-size: 0.96rem !important;
-        font-weight: 700 !important;
-        color: #0369A1 !important;
+        font-size: 1rem !important;
+        font-weight: 800 !important;
+        color: #14532D !important;
         margin-bottom: 0.35rem !important;
         display: flex !important;
         align-items: center !important;
-        gap: 0.4rem !important;
+        gap: 0.45rem !important;
     }
     .evidence-patient-name {
-        font-size: 1.05rem !important;
-        font-weight: 800 !important;
-        color: #0F172A !important;
+        font-size: 1.15rem !important;
+        font-weight: 900 !important;
+        color: #050814 !important;
         padding-left: 0.15rem !important;
     }
     .evidence-val-text {
-        font-size: 0.95rem !important;
-        font-weight: 600 !important;
-        color: #1E293B !important;
+        font-size: 0.98rem !important;
+        font-weight: 700 !important;
+        color: #111827 !important;
         padding-left: 0.15rem !important;
     }
     .evidence-bullet-list {
         list-style: none !important;
         padding-left: 0.15rem !important;
-        margin: 0.25rem 0 0 0 !important;
+        margin: 0.35rem 0 0 0 !important;
     }
     .evidence-bullet-list li {
-        font-size: 0.92rem !important;
-        color: #334155 !important;
-        line-height: 1.65 !important;
+        font-size: 0.94rem !important;
+        color: #374151 !important;
+        line-height: 1.7 !important;
         position: relative !important;
-        padding-left: 1.2rem !important;
+        padding-left: 1.25rem !important;
     }
     .evidence-bullet-list li::before {
         content: "•" !important;
-        color: #2563EB !important;
+        color: #84CC16 !important;
         font-weight: 900 !important;
-        font-size: 1.25rem !important;
+        font-size: 1.35rem !important;
         position: absolute !important;
         left: 0.1rem !important;
         top: -0.15rem !important;
     }
 
-    /* ── Question Input (Rounded 20px, Blue glow on focus, Modern send button) ── */
-    div[data-testid="stChatInput"] {
-        background: #FFFFFF !important;
-        border: 2px solid #BAE6FD !important;
-        border-radius: 20px !important;
-        padding: 0.4rem 0.75rem !important;
-        box-shadow: 0 4px 18px rgba(14, 165, 233, 0.08) !important;
-        transition: all 0.25s ease-in-out !important;
-    }
-    div[data-testid="stChatInput"]:focus-within {
-        border-color: #2563EB !important;
-        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2), 0 8px 26px rgba(14, 165, 233, 0.14) !important;
-    }
-    div[data-testid="stChatInput"] button {
-        background: linear-gradient(135deg, #1E40AF 0%, #2563EB 60%, #0EA5E9 100%) !important;
+    /* ── Chat User Bubble ── */
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] {
+        background: #050814 !important;
         color: #FFFFFF !important;
-        border-radius: 50% !important;
-        border: none !important;
-        box-shadow: 0 3px 10px rgba(37, 99, 235, 0.28) !important;
-        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease !important;
+        border-radius: 20px 20px 4px 20px !important;
+        padding: 0.95rem 1.45rem !important;
+        box-shadow: 0 6px 20px rgba(5, 8, 20, 0.35) !important;
+        border: 2px solid #84CC16 !important;
     }
-    div[data-testid="stChatInput"] button:hover {
-        transform: scale(1.1) !important;
-        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] p {
+        color: #FFFFFF !important;
+        font-weight: 600 !important;
     }
-    div[data-testid="stChatInput"] button svg {
-        fill: #FFFFFF !important;
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="chatAvatarIcon-user"] {
+        background: #84CC16 !important;
+        color: #FFFFFF !important;
+    }
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="chatAvatarIcon-assistant"] {
+        background: #050814 !important;
+        color: #84CC16 !important;
+        border: 1.5px solid #84CC16 !important;
     }
 
-    /* ── Tiny Footer ── */
+    /* ── Upload Area ── */
+    div[data-testid="stFileUploader"] section {
+        background-color: #FFFFFF !important;
+        border: 2px dashed #84CC16 !important;
+        border-radius: 20px !important;
+        padding: 0.85rem 1.15rem !important;
+        box-shadow: 0 4px 14px rgba(132, 204, 22, 0.12) !important;
+        transition: all 0.25s ease-in-out !important;
+    }
+    div[data-testid="stFileUploader"] section:hover {
+        border-color: #65A30D !important;
+        background-color: #F0FDF4 !important;
+        box-shadow: 0 0 22px rgba(132, 204, 22, 0.28) !important;
+        transform: translateY(-2px) !important;
+    }
+    div[data-testid="stFileUploader"] section [data-testid="stMarkdownContainer"] p {
+        color: #365314 !important;
+        font-weight: 700 !important;
+        font-size: 0.88rem !important;
+        margin: 0 !important;
+    }
+
+    /* ── Expanders (Clean Card Design Matching Screenshot) ── */
+    div[data-testid="stExpander"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+        overflow: hidden !important;
+        margin-top: 0.75rem !important;
+    }
+    div[data-testid="stExpander"] summary {
+        background-color: #F8FAFC !important;
+        padding: 0.65rem 1rem !important;
+        font-weight: 700 !important;
+        color: #334155 !important;
+        border-bottom: 1px solid #F1F5F9 !important;
+    }
+    div[data-testid="stExpander"] summary:hover {
+        color: #0284C7 !important;
+    }
+    div[data-testid="stExpander"] [data-testid="stExpanderDetails"] {
+        padding: 0.75rem 1rem !important;
+    }
+
+    /* ── App Footer ── */
     .app-footer {
         text-align: center;
-        color: #64748B;
-        font-size: 0.82rem;
-        font-weight: 600;
-        margin-top: 2.5rem;
-        padding-top: 1.25rem;
-        border-top: 1px solid #E2E8F0;
+        color: #1F2937;
+        font-size: 0.88rem;
+        font-weight: 700;
+        margin-top: 3rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid #D9F99D;
         letter-spacing: 0.02em;
     }
 
@@ -887,24 +1363,54 @@ st.markdown("""
             padding-left: 1rem !important;
             padding-right: 1rem !important;
         }
+        .hero-title-text {
+            font-size: 1.8rem !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Header Section (Professional Blue Gradient Banner) ───────────────────────
+# ── Header Hero Banner (Dark #050814 with Neon Highlights #84CC16) ────────────
 st.markdown("""
-<div class="sky-header-banner">
-    <h1 class="header-title-text">🩺 Multimodal Dengue Report RAG Assistant</h1>
-    <p class="header-subtitle-text">AI-Powered Clinical Decision Support System</p>
+<div class="saas-hero-banner">
+    <div class="hero-tagline-badge">
+        <span class="hero-pulse-dot"></span>
+        <span>AI-POWERED CLINICAL DECISION SUPPORT PLATFORM</span>
+        <span style="opacity: 0.4;">|</span>
+        <span style="color: #D9F99D;">AWS BEDROCK RAG</span>
+    </div>
+    <h1 class="hero-title-text">
+        <span style="color:#74D116;">🩺 Multimodal Dengue Report RAG Assistant</span>
+    </h1>
+    <p class="hero-subtitle-text">
+        Clinical Decision Support System • High-Precision Diagnostics & Grounded Evidence Synthesis
+    </p>
+    <div class="hero-chip-row">
+        <span class="hero-chip">🟢 Bedrock Knowledge Base Active</span>
+        <span class="hero-chip">⚡ Real-Time Multimodal Retrieval</span>
+        <span class="hero-chip">🛡️ Clinical Guardrails Synced</span>
+    </div>
 </div>
 """, unsafe_allow_html=True)
+
+# Initialize required session state keys safely
+if "active_patient_display" not in st.session_state:
+    st.session_state.active_patient_display = None
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "recent_questions" not in st.session_state or not st.session_state.recent_questions:
+    st.session_state.recent_questions = [
+        "What is the diagnosis?",
+        "What is the platelet count?",
+        "What is the risk level?"
+    ]
 
 # ── Horizontal Top Row: 4 Modern Cards (Exact Structure, Equal Heights) ──────
 col1, col2, col3, col4 = st.columns([1.1, 1.8, 1.1, 1.1], gap="medium")
 
 # Column 1: Configuration
 with col1:
-    with st.container(border=True):
+    with st.container(border=True, key="card_config"):
         st.markdown('<div class="col-header">⚙️ Configuration</div>', unsafe_allow_html=True)
         selected_model = st.selectbox(
             "Select LLM Model",
@@ -913,13 +1419,17 @@ with col1:
             label_visibility="collapsed"
         )
         st.markdown(
-            f'<span class="pill-badge pill-model">Model Selected ✅ <span style="font-weight:600; opacity:0.85;">({selected_model})</span></span>',
+            f'''<div class="product-badge" style="margin-top: 0.65rem;">
+                <span class="badge-dot"></span>
+                <span class="product-badge-label">Active Model</span>
+                <span class="product-badge-state">🟢 {selected_model}</span>
+            </div>''',
             unsafe_allow_html=True
         )
 
 # Column 2: Document Upload
 with col2:
-    with st.container(border=True):
+    with st.container(border=True, key="card_upload"):
         st.markdown('<div class="col-header">📄 Document Upload</div>', unsafe_allow_html=True)
         if "uploader_key" not in st.session_state:
             st.session_state.uploader_key = 0
@@ -945,7 +1455,7 @@ with col2:
                         unsafe_allow_html=True
                     )
                 with col_fdel:
-                    if st.button("✕", key=f"remove_uploaded_{idx}_{file.name[:8]}", help=f"Remove {file.name}", use_container_width=True):
+                    if st.button("✕", key=f"remove_uploaded_{idx}_{file.name[:8]}", use_container_width=True):
                         st.session_state.uploader_key += 1
                         clean_directories()
                         st.cache_resource.clear()
@@ -968,7 +1478,7 @@ with col2:
                             unsafe_allow_html=True
                         )
                     with col_fdel:
-                        if st.button("✕", key=f"remove_active_{idx}_{fname[:8]}", help=f"Remove {fname}", use_container_width=True):
+                        if st.button("✕", key=f"remove_active_{idx}_{fname[:8]}", use_container_width=True):
                             clean_directories()
                             st.cache_resource.clear()
                             st.session_state.messages = []
@@ -976,22 +1486,25 @@ with col2:
                             st.session_state.report_processed = False
                             st.rerun()
 
-        process_clicked = st.button("🚀 Process Documents", use_container_width=True)
+        process_clicked = st.button("🚀 Process Documents", type="primary", use_container_width=True, key="btn_process_docs")
 
 # Column 3: Index Status
 with col3:
-    with st.container(border=True):
+    with st.container(border=True, key="card_index"):
         st.markdown('<div class="col-header">🗄️ Index Status</div>', unsafe_allow_html=True)
         if load_vectorstore() is not None:
-            st.markdown('<span class="pill-badge pill-green">✅ FAISS Ready</span>', unsafe_allow_html=True)
+            faiss_badge = '<div class="product-badge"><span class="badge-dot"></span><span class="product-badge-label">FAISS Vector</span><span class="product-badge-state">🟢 Ready</span></div>'
         else:
-            st.markdown('<span class="pill-badge pill-red">⏳ FAISS Not Loaded</span>', unsafe_allow_html=True)
-        st.markdown('<span class="pill-badge pill-teal">✅ Bedrock Connected</span>', unsafe_allow_html=True)
-        st.markdown('<div class="status-caption">Knowledge Base synced</div>', unsafe_allow_html=True)
+            faiss_badge = '<div class="product-badge"><span class="badge-dot"></span><span class="product-badge-label">FAISS Vector</span><span class="product-badge-state">🟢 Standby</span></div>'
+        
+        bedrock_badge = '<div class="product-badge"><span class="badge-dot"></span><span class="product-badge-label">AWS Bedrock</span><span class="product-badge-state">🟢 Connected</span></div>'
+        kb_badge = '<div class="product-badge"><span class="badge-dot"></span><span class="product-badge-label">Knowledge Base</span><span class="product-badge-state">🟢 Active</span></div>'
+
+        st.markdown(f'<div class="product-badge-stack">{faiss_badge}{bedrock_badge}{kb_badge}</div>', unsafe_allow_html=True)
 
 # Column 4: Ollama Status
 with col4:
-    with st.container(border=True):
+    with st.container(border=True, key="card_ollama"):
         st.markdown('<div class="col-header">🤖 Ollama Status</div>', unsafe_allow_html=True)
         ollama_running = False
         available_models = []
@@ -1004,15 +1517,18 @@ with col4:
             ollama_running = False
 
         if ollama_running:
+            ollama_badge = '<div class="product-badge"><span class="badge-dot"></span><span class="product-badge-label">Ollama Engine</span><span class="product-badge-state">🟢 Active</span></div>'
             if any(m.startswith(selected_model) for m in available_models):
-                st.markdown('<span class="pill-badge pill-green">✅ Ollama Running</span>', unsafe_allow_html=True)
-                st.markdown(f'<div class="status-caption">{selected_model} ready</div>', unsafe_allow_html=True)
+                model_badge = f'<div class="product-badge"><span class="badge-dot"></span><span class="product-badge-label">{selected_model}</span><span class="product-badge-state">🟢 Ready</span></div>'
+                st.markdown(f'<div class="product-badge-stack">{ollama_badge}{model_badge}</div>', unsafe_allow_html=True)
             else:
-                st.markdown(f'<span class="pill-badge pill-yellow">⚠️ Ollama (Model Missing)</span>', unsafe_allow_html=True)
-                st.markdown(f'<div class="status-caption">Run: ollama pull {selected_model}</div>', unsafe_allow_html=True)
+                model_badge = f'<div class="product-badge badge-pending"><span class="badge-dot dot-amber"></span><span class="product-badge-label">{selected_model}</span><span class="product-badge-state state-pending">⚠️ Missing</span></div>'
+                st.markdown(f'<div class="product-badge-stack">{ollama_badge}{model_badge}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="status-caption">Run: <code>ollama pull {selected_model}</code></div>', unsafe_allow_html=True)
         else:
-            st.markdown('<span class="pill-badge pill-red">❌ Ollama Offline</span>', unsafe_allow_html=True)
-            st.markdown('<div class="status-caption">Run: ollama serve</div>', unsafe_allow_html=True)
+            offline_badge = '<div class="product-badge badge-offline"><span class="badge-dot dot-red"></span><span class="product-badge-label">Ollama Engine</span><span class="product-badge-state state-offline">❌ Offline</span></div>'
+            st.markdown(f'<div class="product-badge-stack">{offline_badge}</div>', unsafe_allow_html=True)
+            st.markdown('<div class="status-caption">Run: <code>ollama serve</code></div>', unsafe_allow_html=True)
 
 # Divider
 st.markdown("---")
@@ -1080,7 +1596,7 @@ if st.session_state.get("report_processed") and st.session_state.get("active_pat
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "recent_questions" not in st.session_state:
+if "recent_questions" not in st.session_state or not st.session_state.recent_questions:
     st.session_state.recent_questions = [
         "What is the diagnosis?",
         "What is the platelet count?",
@@ -1088,37 +1604,34 @@ if "recent_questions" not in st.session_state:
     ]
 
 # ── Multilingual Voice Assistant Controls (Sky Blue Healthcare Card) ────────
-with st.container(border=True):
+with st.container(border=True, key="card_voice"):
     col_vlang, col_vtrans, col_vmode = st.columns([0.34, 0.33, 0.33])
     with col_vlang:
         selected_language = st.selectbox(
             "🌐 Language",
             options=["English", "Hindi", "Kannada", "Telugu", "Tamil", "Marathi"],
             index=0,
-            key="ui_language_select",
-            help="Choose language for voice input, translation, and voice playback"
+            key="ui_language_select"
         )
     with col_vtrans:
         st.markdown("<div style='height: 1.7rem;'></div>", unsafe_allow_html=True)
         translate_responses = st.toggle(
             "🌐 Translate Responses",
             value=(selected_language != "English"),
-            key="ui_translate_responses_toggle",
-            help="Translate clinical answers into the selected language"
+            key="ui_translate_responses_toggle"
         )
     with col_vmode:
         st.markdown("<div style='height: 1.7rem;'></div>", unsafe_allow_html=True)
         voice_assistant_mode = st.toggle(
             "🎙️ Voice Assistant Mode",
             value=False,
-            key="ui_voice_assistant_mode_toggle",
-            help="Hands-free assistant: Speak -> Retrieve -> Auto-spoken response"
+            key="ui_voice_assistant_mode_toggle"
         )
 
     # Voice Input Control
     st.markdown(
-        f'<div style="font-size: 0.88rem; font-weight: 700; color: #0369A1; margin-top: 0.35rem; margin-bottom: 0.25rem;">'
-        f'🎤 Voice Input <span style="font-weight: 500; font-size: 0.8rem; color: #64748B;">(Click mic to speak in <b>{selected_language}</b>)</span>'
+        f'<div style="font-size: 0.88rem; font-weight: 700; color: #365314; margin-top: 0.35rem; margin-bottom: 0.25rem;">'
+        f'🎤 Voice Input <span style="font-weight: 500; font-size: 0.8rem; color: #4B5563;">(Click mic to speak in <b>{selected_language}</b>)</span>'
         f'</div>',
         unsafe_allow_html=True
     )
@@ -1152,9 +1665,9 @@ with st.container(border=True):
 
     # Show pending voice query if voice assistant mode is not automatically submitting
     if st.session_state.get("pending_voice_query"):
-        with st.container(border=True):
+        with st.container(border=True, key="card_pending_voice"):
             st.markdown(
-                f'<div style="font-size: 0.92rem; color: #0284C7; font-weight: 600; margin-bottom: 0.35rem;">'
+                f'<div style="font-size: 0.92rem; color: #365314; font-weight: 600; margin-bottom: 0.35rem;">'
                 f'🎤 <b>Voice Input Recognized:</b> "{st.session_state.pending_voice_query}"'
                 f'</div>',
                 unsafe_allow_html=True
@@ -1182,10 +1695,10 @@ def get_smart_suggestions() -> list:
     """
     base_suggestions = [
         ("Diagnosis", "What is the diagnosis?"),
+        ("Risk Factors", "Why is the patient at risk?"),
         ("Platelets", "What is the platelet count?"),
-        ("Risk", "What is the risk level?"),
-        ("Recommendations", "What recommendations are provided?"),
-        ("Summary", "Summarize the report.")
+        ("Platelet Normalcy", "Is the platelet count normal?"),
+        ("Risk", "What is the risk level?")
     ]
 
     active_files = [f for f in os.listdir("reports") if os.path.isfile(os.path.join("reports", f)) and not f.endswith(".json")] if os.path.exists("reports") else []
@@ -1204,90 +1717,57 @@ def get_smart_suggestions() -> list:
     if not combined_text:
         return base_suggestions
 
-    text_lower = combined_text.lower()
-    from rag_pipeline import extract_dynamic_entities_from_text
-    entities = extract_dynamic_entities_from_text(combined_text)
+    return base_suggestions
 
-    smart = []
+# ── Suggested Questions Section ──────────────────────────────────────────────
+st.markdown("""
+<div class="suggested-q-title">💡 Suggested Questions</div>
+""", unsafe_allow_html=True)
 
-    # 1. Diagnosis
-    has_diag = bool(entities.get("diagnosis")) or ("diagnos" in text_lower)
-    if has_diag:
-        smart.append(("Diagnosis", "What is the diagnosis?"))
-        smart.append(("Risk Factors", "Why is the patient at risk?"))
-    else:
-        smart.append(("Diagnosis", "What is the diagnosis?"))
+smart_queries = get_smart_suggestions()
 
-    # 2. Platelet Count
-    has_platelets = bool(entities.get("platelet_count")) or ("platelet" in text_lower) or ("thrombocyt" in text_lower)
-    if has_platelets:
-        smart.append(("Platelets", "What is the platelet count?"))
-        smart.append(("Platelet Normalcy", "Is the platelet count normal?"))
-    else:
-        smart.append(("Platelets", "What is the platelet count?"))
+# Fallback if empty
+if not smart_queries:
+    smart_queries = [
+        ("Diagnosis", "What is the diagnosis?"),
+        ("Risk Factors", "Why is the patient at risk?"),
+        ("Platelets", "What is the platelet count?"),
+        ("Platelet Normalcy", "Is the platelet count normal?"),
+        ("Risk", "What is the risk level?")
+    ]
 
-    # 3. Risk Level
-    has_risk = bool(entities.get("risk_level")) or ("risk" in text_lower) or ("severe" in text_lower) or ("warning" in text_lower)
-    if has_risk:
-        smart.append(("Risk", "What is the risk level?"))
-        smart.append(("Precautions", "What precautions should the patient take?"))
-    else:
-        smart.append(("Risk", "What is the risk level?"))
+sq_cols = st.columns(len(smart_queries))
+for idx, (col, (pill_label, full_q)) in enumerate(zip(sq_cols, smart_queries)):
+    with col:
+        # No help= to avoid label rendering conflicts
+        if st.button(pill_label, key=f"chip_q_{idx}", use_container_width=True):
+            if full_q not in st.session_state.recent_questions:
+                st.session_state.recent_questions.insert(0, full_q)
+                st.session_state.recent_questions = st.session_state.recent_questions[:5]
+            st.session_state.messages = [{"role": "user", "content": full_q}]
+            st.rerun()
 
-    # 4. Recommendations
-    has_recs = bool(entities.get("recommendations")) or ("recommend" in text_lower) or ("advise" in text_lower) or ("treatment" in text_lower)
-    if has_recs:
-        smart.append(("Recommendations", "What recommendations are provided?"))
-    else:
-        smart.append(("Recommendations", "What recommendations are provided?"))
 
-    # 5. Summary
-    smart.append(("Summary", "Summarize the report."))
+# ── Recent Questions (Last 5 Questions Stored — Always Visible as in Reference) ───
+if not st.session_state.get("recent_questions"):
+    st.session_state.recent_questions = [
+        "What is the diagnosis?",
+        "What is the platelet count?",
+        "What is the risk level?"
+    ]
 
-    # Deduplicate while preserving order, take top 5
-    seen_q = set()
-    result = []
-    for label, q in smart:
-        if q not in seen_q:
-            seen_q.add(q)
-            result.append((label, q))
-            if len(result) == 5:
-                break
-
-    return result if len(result) >= 4 else base_suggestions
-
-# ── Suggested Questions Section (Clickable Pills - Shown After Processing Report) ─
-if st.session_state.get("report_processed") or (load_vectorstore() is not None):
-    st.markdown("""
-    <div class="suggested-q-title">💡 Suggested Questions</div>
-    """, unsafe_allow_html=True)
-
-    smart_queries = get_smart_suggestions()
-
-    sq_cols = st.columns(len(smart_queries))
-    for col, (pill_label, full_q) in zip(sq_cols, smart_queries):
-        with col:
-            if st.button(pill_label, key=f"sq_btn_{pill_label}_{abs(hash(full_q)) % 10000}", help=full_q, use_container_width=True):
-                if full_q not in st.session_state.recent_questions:
-                    st.session_state.recent_questions.insert(0, full_q)
-                    st.session_state.recent_questions = st.session_state.recent_questions[:5]
-                st.session_state.messages = [{"role": "user", "content": full_q}]
+with st.expander("🕒 Recent Questions", expanded=True):
+    for idx, rq in enumerate(st.session_state.recent_questions):
+        col_rq_text, col_rq_btn = st.columns([0.84, 0.16])
+        with col_rq_text:
+            st.markdown(f'<div class="recent-q-item">• {rq}</div>', unsafe_allow_html=True)
+        with col_rq_btn:
+            if st.button("Ask ↗", key=f"ask_rq_btn_{idx}", use_container_width=True):
+                st.session_state.messages = [{"role": "user", "content": rq}]
                 st.rerun()
 
-# ── Recent Questions (Last 5 Questions Stored) ──────────────────────────────
-if st.session_state.recent_questions:
-    with st.expander("🕒 Recent Questions", expanded=False):
-        for rq in st.session_state.recent_questions:
-            col_rq_text, col_rq_btn = st.columns([0.85, 0.15])
-            with col_rq_text:
-                st.markdown(f'<div class="recent-q-item">• {rq}</div>', unsafe_allow_html=True)
-            with col_rq_btn:
-                if st.button("Ask ↗", key=f"ask_rq_{rq}", use_container_width=True):
-                    st.session_state.messages = [{"role": "user", "content": rq}]
-                    st.rerun()
-
-# ── Input query (Rounded input box, blue glow on focus, modern send button) ─
-if prompt := st.chat_input("Ask about diagnosis, platelet count, risk level, recommendations, or patient details..."):
+# ── Input query (Reference Match: Capsule input with 'Ask question...') ─────
+if prompt := st.chat_input("Ask question..."):
     # Add to recent questions (max 5)
     if prompt not in st.session_state.recent_questions:
         st.session_state.recent_questions.insert(0, prompt)
@@ -1295,58 +1775,14 @@ if prompt := st.chat_input("Ask about diagnosis, platelet count, risk level, rec
     # Keep only the latest prompt
     st.session_state.messages = [{"role": "user", "content": prompt}]
 
-# ── Answer Section Helper (Formats Clean White Cards with Light Blue Border) ─
-def render_styled_answer_cards(answer_text: str) -> str:
+# ── Answer Section Helper (Formats Clean Single Direct Card) ─────────────────
+def render_styled_answer_cards(answer_text: str, question: str = "") -> str:
     """
-    Renders the Answer Section cards with:
-    - White background
-    - Light blue border
-    - Rounded corners (18px-20px)
-    - Soft shadows
-    Preserves all section headers:
-    ✅ Direct Answer, 📋 Patient Details, 🔬 Clinical Findings,
-    ⚠️ Health Insights, 💡 Suggestions, 📌 Recommendations, 🏥 Follow-up Advice
+    Renders a single clean answer card without multiple paragraphs, question numbers,
+    or answer numbers. Contains strictly the direct question-related answer.
     """
-    known_section_patterns = [
-        ("✅ Direct Answer", re.compile(r'^(?:✅\s*)?(?:Direct\s*Answer|प्रत्यक्ष\s*उत्तर|थेट\s*उत्तर|ನೇರ\s*ಉತ್ತರ|ప్రత్యక్ష\s*సమాధానం|நேரடி\s*பதில்)[:\s\-]*$', re.I | re.M)),
-        ("📋 Patient Details", re.compile(r'^(?:📋\s*)?(?:Patient\s*Details|रोगी\s*विवरण|रुग्ण\s*तपशील|ರೋಗಿಯ\s*ವಿವರಗಳು|రోగి\s*వివరాలు|நோயாளி\s*விவரங்கள்)[:\s\-]*$', re.I | re.M)),
-        ("🔬 Clinical Findings", re.compile(r'^(?:🔬\s*)?(?:Clinical\s*Findings|नैदानिक\s*निष्कर्ष|वैद्यकीय\s*निष्कर्ष|ಕ್ಲಿನಿಕಲ್\s*ಫಲಿತಾಂಶಗಳು|క్లినికల్\s*కనుగొన్నవి|மருத்துவ\s*முடிவுகள்)[:\s\-]*$', re.I | re.M)),
-        ("⚠️ Health Insights", re.compile(r'^(?:⚠️\s*)?(?:Health\s*Insights|स्वास्थ्य\s*संकेत|आरोग्य\s*अंतर्दृष्टी|ಆರೋಗ್ಯ\s*ಒಳನೋಟಗಳು|ఆరోగ్య\s*అంతర్దృష్టులు|சுகாதார\s*நுண்ணறிவு)[:\s\-]*$', re.I | re.M)),
-        ("💡 Suggestions", re.compile(r'^(?:💡\s*)?(?:Suggestions?|सुझाव|सूचना|ಸಲಹೆಗಳು|సూచనలు|பரிந்துரைகள்)[:\s\-]*$', re.I | re.M)),
-        ("📌 Recommendations", re.compile(r'^(?:📌\s*)?(?:Recommendations?|सिफारिशें|शिफारसी|ಶಿಫಾರಸುಗಳು|సిఫార్సులు|பரிந்துரைகள்)[:\s\-]*$', re.I | re.M)),
-        ("🏥 Follow-up Advice", re.compile(r'^(?:🏥\s*)?(?:Follow-up\s*Advice|फॉलो-अप\s*सलाह|फॉलो-अप\s*सल्ला|ಫಾಲೋ-ಅಪ್\s*ಸಲಹೆ|ఫాలో-అప్\s*సలహా|தொடர்\s*ஆலோசனை)[:\s\-]*$', re.I | re.M)),
-    ]
-
-    matches = []
-    for title, rgx in known_section_patterns:
-        for m in rgx.finditer(answer_text):
-            matches.append((m.start(), m.end(), title))
-
-    if not matches:
-        return f'<div class="answer-card-box">{answer_text}</div>'
-
-    matches.sort(key=lambda x: x[0])
-    cards_html = []
-
-    # Preamble before first section
-    if matches[0][0] > 0:
-        preamble = answer_text[:matches[0][0]].strip()
-        if preamble:
-            cards_html.append(
-                f'<div class="section-card"><div class="section-card-body">{preamble}</div></div>'
-            )
-
-    for i, (start, end, title) in enumerate(matches):
-        next_start = matches[i + 1][0] if i + 1 < len(matches) else len(answer_text)
-        body = answer_text[end:next_start].strip()
-        cards_html.append(
-            f'<div class="section-card">'
-            f'<div class="section-card-title">{title}</div>'
-            f'<div class="section-card-body">{body}</div>'
-            f'</div>'
-        )
-
-    return "".join(cards_html)
+    cleaned = clean_simple_direct_answer(answer_text, question)
+    return f'<div class="answer-card-box">{cleaned}</div>'
 
 # ── Chat Area Rendering ──────────────────────────────────────────────────────
 chat_container = st.container()
@@ -1356,12 +1792,9 @@ with chat_container:
     for idx, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
             if message["role"] == "assistant":
-                clean_content = re.sub(r'^\s*📋?\s*\*\*Retrieved Patient:\*\*.*?(?:\n\n|\n)', '', message["content"], flags=re.I).strip()
+                clean_content = clean_simple_direct_answer(message["content"])
                 ans_html = render_styled_answer_cards(clean_content)
-                if hasattr(st, "html"):
-                    st.html(ans_html)
-                else:
-                    st.markdown(ans_html, unsafe_allow_html=True)
+                st.markdown(ans_html, unsafe_allow_html=True)
 
                 # Multilingual Voice Output (Listen to Answer button)
                 msg_lang = message.get("lang", selected_language)
@@ -1394,7 +1827,7 @@ with chat_container:
             if detected_lang != "English":
                 st.markdown(
                     f'<div style="margin-bottom: 0.65rem;">'
-                    f'<span class="pill-badge pill-blue">🌐 Detected Language: <b>{detected_lang}</b></span> '
+                    f'<span class="pill-badge pill-green">🌐 Detected Language: <b>{detected_lang}</b></span> '
                     f'<span class="status-caption" style="margin-left: 0.4rem;">(Interpreted clinical query: <i>"{rag_query}"</i>)</span>'
                     f'</div>',
                     unsafe_allow_html=True
@@ -1413,11 +1846,15 @@ with chat_container:
             elif detected_lang != "English":
                 target_lang = detected_lang
 
+            clean_ans = clean_simple_direct_answer(answer, prompt)
             if target_lang != "English":
                 with st.spinner(f"🌐 Translating response to {target_lang}..."):
-                    display_answer = translate_text(answer, target_lang=target_lang, source_lang="English")
+                    display_answer = clean_simple_direct_answer(
+                        translate_text(clean_ans, target_lang=target_lang, source_lang="English"),
+                        prompt
+                    )
             else:
-                display_answer = answer
+                display_answer = clean_ans
 
             # Update Current Patient dynamically based on retrieved record
             if evidence_list and isinstance(evidence_list, dict):
@@ -1430,11 +1867,8 @@ with chat_container:
                         st.session_state.active_patient_display = ret_pname
 
             # Show Answer Section in modern redesigned cards
-            answer_cards_html = render_styled_answer_cards(display_answer)
-            if hasattr(st, "html"):
-                st.html(answer_cards_html)
-            else:
-                st.markdown(answer_cards_html, unsafe_allow_html=True)
+            answer_cards_html = render_styled_answer_cards(display_answer, prompt)
+            st.markdown(answer_cards_html, unsafe_allow_html=True)
 
             # Show Action Buttons (Listen to Answer, Download PDF)
             col_act1, col_act2 = st.columns([0.45, 0.55])
@@ -1499,10 +1933,7 @@ with chat_container:
                     f'</div>'
                 )
                 with st.expander("📋 View Clinical Evidence", expanded=False):
-                    if hasattr(st, "html"):
-                        st.html(clinical_card_html)
-                    else:
-                        st.markdown(clinical_card_html, unsafe_allow_html=True)
+                    st.markdown(clinical_card_html, unsafe_allow_html=True)
 
             # Save latest state with language metadata
             st.session_state.messages.append({
@@ -1514,6 +1945,6 @@ with chat_container:
 # ── Tiny Footer ──────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="app-footer">
-    Powered by: Amazon S3 • Bedrock Knowledge Base • RAG
+    Powered by: Amazon S3 • Amazon Bedrock • Knowledge Base • RAG
 </div>
 """, unsafe_allow_html=True)
