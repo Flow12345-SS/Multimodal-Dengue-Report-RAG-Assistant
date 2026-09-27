@@ -7,7 +7,7 @@ from datetime import datetime
 
 # Page config MUST be the first command
 st.set_page_config(
-    page_title="Multimodal Dengue Report RAG Assistant",
+    page_title="Multimodel Dengue Report RAG Assistant",
     page_icon="🩺",
     layout="wide"
 )
@@ -106,7 +106,7 @@ def generate_answer_pdf(question: str, answer: str, patient_name: str) -> bytes:
         )
 
         story = []
-        story.append(Paragraph("🩺 Multimodal Dengue Report RAG Assistant", title_style))
+        story.append(Paragraph("🩺 Multimodel Dengue Report RAG Assistant", title_style))
         story.append(Paragraph("Clinical Decision Support System • Grounded Assessment Report", subtitle_style))
         story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#84CC16'), spaceAfter=12))
 
@@ -167,7 +167,7 @@ def generate_answer_pdf(question: str, answer: str, patient_name: str) -> bytes:
         # Fallback if ReportLab is not available
         timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         txt_content = (
-            f"MULTIMODAL DENGUE REPORT RAG ASSISTANT\n"
+            f"MULTIMODEL DENGUE REPORT RAG ASSISTANT\n"
             f"Clinical Decision Support Assessment Report\n"
             f"====================================================\n"
             f"Patient: {patient_name}\n"
@@ -1380,14 +1380,14 @@ st.markdown("""
         <span style="color: #D9F99D;">AWS BEDROCK RAG</span>
     </div>
     <h1 class="hero-title-text">
-        <span style="color:#74D116;">🩺 Multimodal Dengue Report RAG Assistant</span>
+        <span style="color:#74D116;">🩺 Multimodel Dengue Report RAG Assistant</span>
     </h1>
     <p class="hero-subtitle-text">
         Clinical Decision Support System • High-Precision Diagnostics & Grounded Evidence Synthesis
     </p>
     <div class="hero-chip-row">
         <span class="hero-chip">🟢 Bedrock Knowledge Base Active</span>
-        <span class="hero-chip">⚡ Real-Time Multimodal Retrieval</span>
+        <span class="hero-chip">⚡ Real-Time Multimodel Retrieval</span>
         <span class="hero-chip">🛡️ Clinical Guardrails Synced</span>
     </div>
 </div>

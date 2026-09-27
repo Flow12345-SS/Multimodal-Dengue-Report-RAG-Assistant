@@ -17,7 +17,7 @@ function App() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
           <div>
             <h1 style={titleStyle}>
-              🩺 Multimodal Dengue Report <span style={neonHighlightStyle}>RAG Assistant</span>
+              🩺 Multimodel Dengue Report <span style={neonHighlightStyle}>RAG Assistant</span>
             </h1>
             <p style={subtitleStyle}>
               Clinical Decision Support System • High-Precision Diagnostics & Grounded Evidence Synthesis
@@ -34,7 +34,7 @@ function App() {
         </div>
         <div style={heroChipRowStyle}>
           <span style={heroChipStyle}>🟢 Bedrock Knowledge Base Active</span>
-          <span style={heroChipStyle}>⚡ Real-Time Multimodal Retrieval</span>
+          <span style={heroChipStyle}>⚡ Real-Time Multimodel Retrieval</span>
           <span style={heroChipStyle}>🛡️ Clinical Guardrails Synced</span>
         </div>
       </header>
