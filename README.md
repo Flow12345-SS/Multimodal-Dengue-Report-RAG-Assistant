@@ -1,4 +1,4 @@
-# Multimodel Dengue Report RAG Assistant
+# Multimodal Dengue Report RAG Assistant
 
 A healthcare Retrieval-Augmented Generation (RAG) chatbot designed to answer questions from synthetic dengue patient reports. This system is entirely local and privacy-preserving, running offline using FAISS and Ollama.
 

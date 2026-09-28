@@ -7,7 +7,7 @@ from datetime import datetime
 
 # Page config MUST be the first command
 st.set_page_config(
-    page_title="Multimodel Dengue Report RAG Assistant",
+    page_title="Multimodal Dengue Report RAG Assistant",
     page_icon="🩺",
     layout="wide"
 )
@@ -106,7 +106,7 @@ def generate_answer_pdf(question: str, answer: str, patient_name: str) -> bytes:
         )
 
         story = []
-        story.append(Paragraph("🩺 Multimodel Dengue Report RAG Assistant", title_style))
+        story.append(Paragraph("🩺 Multimodal Dengue Report RAG Assistant", title_style))
         story.append(Paragraph("Clinical Decision Support System • Grounded Assessment Report", subtitle_style))
         story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#84CC16'), spaceAfter=12))
 
@@ -167,7 +167,7 @@ def generate_answer_pdf(question: str, answer: str, patient_name: str) -> bytes:
         # Fallback if ReportLab is not available
         timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         txt_content = (
-            f"MULTIMODEL DENGUE REPORT RAG ASSISTANT\n"
+            f"MULTIMODAL DENGUE REPORT RAG ASSISTANT\n"
             f"Clinical Decision Support Assessment Report\n"
             f"====================================================\n"
             f"Patient: {patient_name}\n"
@@ -500,7 +500,40 @@ st.markdown("""
         border-radius: 9999px !important;
         box-shadow: 0 2px 8px rgba(132, 204, 22, 0.16) !important;
         font-size: 0.84rem !important;
-        padding: 0.4rem 0.95rem !important;
+        padding: 0.35rem 0.75rem !important;
+    }
+    .file-item-card {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        background: linear-gradient(135deg, #F0FDF4 0%, #ECFCCB 100%) !important;
+        background-color: #F7FEE7 !important;
+        color: #14532D !important;
+        border: 1.5px solid #84CC16 !important;
+        border-radius: 9999px !important;
+        box-shadow: 0 2px 6px rgba(132, 204, 22, 0.15) !important;
+        padding: 0.35rem 0.75rem !important;
+        font-size: 0.82rem !important;
+        margin-top: 0.35rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .file-item-name {
+        font-weight: 700 !important;
+        color: #14532D !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        display: inline-block !important;
+        max-width: 100% !important;
+    }
+    .file-item-size {
+        font-size: 0.75rem !important;
+        color: #4D7C0F !important;
+        font-weight: 600 !important;
+        flex-shrink: 0 !important;
+        margin-left: 0.35rem !important;
+        white-space: nowrap !important;
     }
     .status-caption {
         font-size: 0.78rem;
@@ -1380,14 +1413,14 @@ st.markdown("""
         <span style="color: #D9F99D;">AWS BEDROCK RAG</span>
     </div>
     <h1 class="hero-title-text">
-        <span style="color:#74D116;">🩺 Multimodel Dengue Report RAG Assistant</span>
+        <span style="color:#74D116;">🩺 Multimodal Dengue Report RAG Assistant</span>
     </h1>
     <p class="hero-subtitle-text">
         Clinical Decision Support System • High-Precision Diagnostics & Grounded Evidence Synthesis
     </p>
     <div class="hero-chip-row">
         <span class="hero-chip">🟢 Bedrock Knowledge Base Active</span>
-        <span class="hero-chip">⚡ Real-Time Multimodel Retrieval</span>
+        <span class="hero-chip">⚡ Real-Time Multimodal Retrieval</span>
         <span class="hero-chip">🛡️ Clinical Guardrails Synced</span>
     </div>
 </div>
@@ -1406,7 +1439,7 @@ if "recent_questions" not in st.session_state or not st.session_state.recent_que
     ]
 
 # ── Horizontal Top Row: 4 Modern Cards (Exact Structure, Equal Heights) ──────
-col1, col2, col3, col4 = st.columns([1.1, 1.8, 1.1, 1.1], gap="medium")
+col1, col2, col3, col4 = st.columns([1.0, 2.1, 1.0, 1.0], gap="medium")
 
 # Column 1: Configuration
 with col1:
@@ -1447,11 +1480,16 @@ with col2:
             for idx, file in enumerate(uploaded_files):
                 size_kb = len(file.getvalue()) / 1024
                 size_str = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb/1024:.1f} MB"
-                col_finfo, col_fdel = st.columns([0.80, 0.20])
+                col_finfo, col_fdel = st.columns([0.88, 0.12])
                 with col_finfo:
                     st.markdown(
-                        f'<div class="pill-badge pill-file" style="width:100%; overflow:hidden; text-overflow:ellipsis;" title="{file.name}">'
-                        f'📄 <b>{file.name}</b> <span style="opacity:0.75;">({size_str})</span></div>',
+                        f'<div class="file-item-card" title="{file.name} ({size_str})">'
+                        f'<div style="display:flex; align-items:center; gap:0.4rem; min-width:0; overflow:hidden;">'
+                        f'<span style="flex-shrink:0;">📄</span>'
+                        f'<span class="file-item-name">{file.name}</span>'
+                        f'</div>'
+                        f'<span class="file-item-size">{size_str}</span>'
+                        f'</div>',
                         unsafe_allow_html=True
                     )
                 with col_fdel:
@@ -1470,11 +1508,16 @@ with col2:
                     fpath = os.path.join("reports", fname)
                     fsize = os.path.getsize(fpath) / 1024
                     size_str = f"{fsize:.1f} KB" if fsize < 1024 else f"{fsize/1024:.1f} MB"
-                    col_finfo, col_fdel = st.columns([0.80, 0.20])
+                    col_finfo, col_fdel = st.columns([0.88, 0.12])
                     with col_finfo:
                         st.markdown(
-                            f'<div class="pill-badge pill-file" style="width:100%; overflow:hidden; text-overflow:ellipsis;" title="{fname}">'
-                            f'📄 <b>{fname}</b> <span style="opacity:0.75;">({size_str})</span></div>',
+                            f'<div class="file-item-card" title="{fname} ({size_str})">'
+                            f'<div style="display:flex; align-items:center; gap:0.4rem; min-width:0; overflow:hidden;">'
+                            f'<span style="flex-shrink:0;">📄</span>'
+                            f'<span class="file-item-name">{fname}</span>'
+                            f'</div>'
+                            f'<span class="file-item-size">{size_str}</span>'
+                            f'</div>',
                             unsafe_allow_html=True
                         )
                     with col_fdel:

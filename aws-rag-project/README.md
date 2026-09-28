@@ -1,4 +1,4 @@
-# AWS Bedrock Multimodel Dengue Report RAG Assistant
+# AWS Bedrock Multimodal Dengue Report RAG Assistant
 
 This project is a fully-featured, production-ready implementation of a healthcare RAG assistant on AWS, moving away from local FAISS/Ollama setups.
 
